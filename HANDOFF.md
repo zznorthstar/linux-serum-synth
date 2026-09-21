@@ -17,6 +17,7 @@
 - `ctest` passes. The native core test imports and renders `SO_IS_bass_press.SerumPreset` (embedded productVersion **2.1.2**), with 47/83 explicit fields typed and 123 diagnostic entries across unmapped/mapped-but-not-rendered/unsupported state. Every explicit field is either typed or individually flagged as unmapped. This fixture does not prove 2.1.4 compatibility.
 - REAPER on this machine discovered the renamed **ZYG-ZXG** VST3, inserted it as an instrument, saved a project with a MIDI note and that real preset (loaded via developer-only environment hook), then reopened it without environment variables and produced a 2-second, 48 kHz stereo offline render (mean −34.1 dBFS, peak −28.2 dBFS). Evidence is in `docs/TESTING.md`; private render/project artifacts are under `/tmp/zygzxg-host-final-zM4kqU`.
 - `compatibility/serum2_support.json` is the machine-readable dashboard. It intentionally marks most implementation categories none/partial and full semantic coverage unknown.
+- REAPER **realtime** transport playback is now separately verified: `tests/reaper_realtime.lua` (run via `reaper -nonewinst tests/reaper_realtime.lua` against a live interactive session) presses the real transport play button and reads `Track_GetPeakInfo` on the track and master during actual playback through the real PulseAudio/PipeWire device — non-zero on both, distinct from the offline render above. See `docs/TESTING.md` for numbers and a documented `-nonewinst` environment quirk (intermittent forwarding; can pop a duplicate GUI that must be closed).
 
 Do not interpret “626 presets decode” as “626 presets load into a compatible synth,” or this one REAPER render as full preset compatibility. The legacy `.fxp` remains unparsed.
 
@@ -25,7 +26,7 @@ Do not interpret “626 presets decode” as “626 presets load into a compatib
 1. Strengthen the fixture-backed semantic map, particularly verified defaults/ranges/scales, unresolved source IDs `39–44/47–48`, modulation destination semantics, oscillator A/B/C enable defaults, and FX splitter nesting. Keep unresolved state explicit; do not wait for theoretical completion before rendering more features.
 2. Add actual modulation DSP early (Env/LFO/macro/velocity → typed destinations), then dual-filter/routing behavior. The current imported user preset has 15 active routes that do not render, making it a strong next regression target.
 3. Replace temporary wavetable interpolation/low-pass fallback with tested bandlimited tables and distinct filter implementations. Expand sample/multisample/granular/spectral/SUB/NOISE and asset resolution in vertical slices using private real presets plus synthetic fixtures.
-4. Verify GUI-based preset loading, REAPER realtime playback, 44.1/96 kHz and buffer-size changes, project reload, automation and failure diagnostics. Build CLAP as a separate format and test independently. Only then consider binary releases.
+4. ~~Verify GUI-based preset loading, REAPER realtime playback~~ REAPER realtime playback is verified (see above). Still needed: GUI-based preset loading/editing (see the new user-facing editor work below), 44.1/96 kHz and buffer-size changes, project reload, automation and failure diagnostics. Build CLAP as a separate format and test independently. Only then consider binary releases.
 
 ## Commands
 

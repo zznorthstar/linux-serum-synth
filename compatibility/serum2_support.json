@@ -24,7 +24,7 @@
     "arp": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
     "clips": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
     "voice_global": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "none", "real_preset_verified": false},
-    "vst3_host": {"researched": "partial", "parsed": "none", "mapped": "none", "implemented": "partial", "tested": "partial", "real_preset_verified": true},
+    "vst3_host": {"researched": "partial", "parsed": "none", "mapped": "none", "implemented": "partial", "tested": "partial", "real_preset_verified": true, "realtime_transport_playback_verified": true, "notes": "Offline render and, separately, realtime REAPER transport playback (non-zero live track/master peaks via Track_GetPeakInfo during actual playback) are both verified -- see docs/TESTING.md. GUI-based preset workflows, automation, sample-rate/buffer-size changes and project reload remain untested, hence tested stays partial."},
     "clap_host": {"researched": "partial", "parsed": "none", "mapped": "none", "implemented": "none", "tested": "none", "real_preset_verified": false}
   }
 }
