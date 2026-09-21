@@ -1,31 +1,35 @@
 # Serum 2 compatibility matrix for ZYG-ZXG
 
-Status: research baseline, 2026-09-21. This is a specification and gap ledger, **not a compatibility claim**. The current implementation decodes Serum 2 preset containers and indexes local assets. It has no patch-model translation, DSP engine, GUI, or plugin.
+Status: first implementation slice, 2026-09-21. This is a specification and gap ledger, **not a full compatibility claim**. A native C++ decoder and importer now create an independent patch model, a basic wavetable/envelope/low-pass renderer exists, and a VST3 bundle builds. Most Serum features are preserved in an opaque sidecar or typed shell but **do not yet affect audio**. See [machine-readable status](../compatibility/serum2_support.json).
 
 Sources: [official Serum 2 User Guide](https://www.xferrecords.com/manual/serum-2/docs) (manual for Serum 2.0.18, April 2025), [official What's New](https://static.xferrecords.com/Serum%202%20What's%20New.pdf), and aggregate inspection of 626 factory `.SerumPreset` files from the supplied 2.1.5 installer. These factory presets were authored as versions **2.0.11–2.0.15**; the installer version does not make them 2.1.5 feature fixtures. The factory corpus is a finite sample, so absence from it does not prove a feature absent from Serum 2. The machine-readable [corpus schema](SERUM2_CORPUS_SCHEMA.json) lists 515 distinct explicit `plainParams` paths, 799 structural paths, 49 observed modulation source IDs, 214 modulated destination type/parameter pairs, observed string enum values, 16 FX module names, and reference-field counts. The provided 2.1.2 user preset is a separate fixture.
 
-Legend: **D** = documented by Xfer; **O** = observed in a decoded preset; **C** = container decoded; **I** = local asset indexed/resolved; **M** = mapped into an independent ZYG patch; **R** = rendered by native ZYG DSP; **UI** = editable in ZYG. Only C and I are implemented, where specified. “Preserved in decoded state” means no field is deleted by the research parser; it does **not** mean a native patch or audio engine can use it.
+Legend: **D** = documented by Xfer; **O** = observed in a decoded preset; **C** = container decoded; **I** = local asset indexed/resolved; **M** = mapped into an independent ZYG patch; **R** = rendered by native ZYG DSP; **UI** = editable in ZYG. M/R below always mean **partial** unless explicitly stated otherwise. “Preserved in decoded state” means no field is deleted by the parser; it does **not** mean a native patch or audio engine can use it.
 
 | Subsystem | Required semantic state | Evidence | Current ZYG status |
 | --- | --- | --- | --- |
-| Main oscillators A/B/C | Independent enable, mode, pitch, level, pan, unison, key/velocity zones and routing | D/O | C; M/R/UI absent |
-| Wavetable | Table identity/content, frame position/interpolation, phase/memory, two warp slots, unison | D/O | C; factory table index I; M/R/UI absent |
+| Main oscillators A/B/C | Independent enable, mode, pitch, level, pan, unison, key/velocity zones and routing | D/O | C; partial M/R for wavetable pitch/level/unison; pan/zones/warps not R |
+| Wavetable | Table identity/content, frame position/interpolation, phase/memory, two warp slots, unison | D/O | C/I; partial M/R for local mono RIFF WAVE frames; no bandlimiting or warps |
 | Sample | Source, regions/loop/slices, scan, pitch, warp, modulation | D/O | C; factory sample index I; M/R/UI absent |
 | Multisample | SFZ mapping, child samples, key/velocity layers, timbre, envelope | D/O | C; SFZ/sample index I; M/R/UI absent |
 | Granular | Sample timeline, grain density/length/window/randomization, warp | D/O | C; sample index I; M/R/UI absent |
 | Spectral | Source, frequency bounds, scan, spectral filter, phase/transients, spectral warps | D/O | C; sample index I; M/R/UI absent |
 | SUB / NOISE | Dedicated source parameters and independent routing | D/O | C; noise asset index I; M/R/UI absent |
-| Filters 1/2 | Exact type identity, cutoff/resonance/drive/var/wet/pan/level | D/O | C; 83 observed voice-filter IDs; M/R/UI absent |
-| Mixer/routing | Seven routing slots, dual filter topology, Main/Direct/None, FX buses | D/O | C; M/R/UI absent |
-| Modulation | Envelopes, LFO/path/chaos, macros, MIDI/MPE, audio-rate source modules | D/O | C; M/R/UI absent |
-| Matrix | 64 ordered slots including source, target, curves, aux, slew, polarity, bypass | D/O | C; M/R/UI absent |
-| Voice/global | Poly/mono/legato/portamento/priority, tuning, MPE, oversampling, voice steps | D/O | C; M/R/UI absent |
+| Filters 1/2 | Exact type identity, cutoff/resonance/drive/var/wet/pan/level | D/O | C; partial M for both; R is only an initial single-pole low-pass fallback for Filter 1, not type compatible |
+| Mixer/routing | Seven routing slots, dual filter topology, Main/Direct/None, FX buses | D/O | C; partial M; first three source routes to Filter 1/Main/Direct/None only |
+| Modulation | Envelopes, LFO/path/chaos, macros, MIDI/MPE, audio-rate source modules | D/O | C; partial M of four envelopes/LFO raw state; only Env 1 is R |
+| Matrix | 64 ordered slots including source, target, curves, aux, slew, polarity, bypass | D/O | C; ordered routes partially M with source/destination/amount/bipolar/bypass; no R |
+| Voice/global | Poly/mono/legato/portamento/priority, tuning, MPE, oversampling, voice steps | D/O | C; mono/master volume/polyphony partially M; basic mono/voice allocation R; other state not R |
 | Arp | 12 clips, rate, patterns, probability/gate/retrigger/velocity/transpose | D/O | C; factory arp index I; M/R/UI absent |
 | Clip sequencer | 12 MIDI clips, notes, launch/playback, keyboard span, MIDI out | D/O | C; factory clip index I; M/R/UI absent |
-| FX rack | 13 effect classes, three splitters, ordered instances, Main/Bus 1/Bus 2 | D/O | C; IR index I; M/R/UI absent |
+| FX rack | 13 effect classes, three splitters, ordered instances, Main/Bus 1/Bus 2 | D/O | C; IR index I; top-level rack/module identity partially M; no R |
 | Asset browser/resolver | Factory/user path, embedded data, missing/ambiguous diagnostics | D/O | Basic local exact-path I; broader import/embedded handling absent |
 | Native ZYG preset | Complete independent patch, ancestry, unknown Serum sidecar | Design requirement | Absent |
-| Native Linux VST3 / CLAP / host state | Audio/MIDI/automation/transport/reload | Design requirement | Absent |
+| Native Linux VST3 / CLAP / host state | Audio/MIDI/automation/transport/reload | Design requirement | ZYG-ZXG VST3 discovered by REAPER; one 2.1.2 real-preset project saved, reopened and rendered non-silent audio offline at 48 kHz; GUI/automation/realtime/other rates not yet verified; CLAP absent |
+
+### Implemented parameter assumptions and open questions
+
+The first C++ importer applies **provisional** defaults for absent explicit fields: Osc A enabled, B/C disabled, wavetable mode, oscillator volume `0.75`, unison `1`, detune `0.2`, octave/coarse/fine `0`; Env 1 attack `0.005 s`, hold `0`, decay `2 s`, sustain `1`, release `0.075 s`; filter cutoff normalized `1`, resonance `10`, drive `0`, wet `100`; master volume `0.7`. These values need isolated-init-preset verification before they become a canonical Serum defaults table. The current audio engine maps normalized cutoff logarithmically from 20–20,000 Hz as a **ZYG rendering choice**, not a proven Serum transfer function. Current table position uses the provisional `0..256` range. Unison detune, pan, phase/random phase, warp modes and oscillator modulation relationships require controlled fixtures. Unknown source IDs `39–44` and `47–48` remain unresolved; they are labelled as such in the typed route and retained in raw state. No parameter is declared fully supported from this provisional map.
 
 ## Oscillators and source material
 

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "container_decoded_factory_versions": ["2.0.11", "2.0.12", "2.0.13", "2.0.14", "2.0.15"],
+  "host_wavetable_vertical_slice_fixture_version": "2.1.2",
+  "semantic_coverage_percent": null,
+  "status_levels": ["none", "partial", "complete"],
+  "categories": {
+    "preset_container": {"researched": "complete", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "partial", "real_preset_verified": true},
+    "asset_resolution": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "partial", "real_preset_verified": true},
+    "wavetable_oscillator": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "partial", "real_preset_verified": true},
+    "sample_oscillator": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "multisample": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "granular": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "spectral": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "sub": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "noise": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "filters": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "none", "real_preset_verified": false},
+    "routing": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "none", "real_preset_verified": false},
+    "envelopes": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "partial", "real_preset_verified": false},
+    "lfo": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "matrix": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "macros": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "fx": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "arp": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "clips": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "none", "tested": "none", "real_preset_verified": false},
+    "voice_global": {"researched": "partial", "parsed": "complete", "mapped": "partial", "implemented": "partial", "tested": "none", "real_preset_verified": false},
+    "vst3_host": {"researched": "partial", "parsed": "none", "mapped": "none", "implemented": "partial", "tested": "partial", "real_preset_verified": true},
+    "clap_host": {"researched": "partial", "parsed": "none", "mapped": "none", "implemented": "none", "tested": "none", "real_preset_verified": false}
+  }
+}

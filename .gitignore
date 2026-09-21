@@ -4,6 +4,19 @@
 /*.png
 /Xfer.Records.Serum.v2.1.5/
 /.local-serum-content/
+*.SerumPreset
+*.fxp
+*.exe
+*.dll
+*.wav
+*.flac
+*.sfz
+*.XferClipBank
+*.SerumStyle
+*.SerumSkin
+*.SerumTable
+*.rpp
+*.rpp-bak
 
 # Local development products.
 /.venv/
