@@ -1,0 +1,14 @@
+# User-provided interoperability material and locally extracted Xfer content.
+/*.SerumPreset
+/*.fxp
+/*.png
+/Xfer.Records.Serum.v2.1.5/
+/.local-serum-content/
+
+# Local development products.
+/.venv/
+/build/
+/dist/
+*.pyc
+__pycache__/
+.pytest_cache/
