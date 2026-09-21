@@ -24,8 +24,8 @@ Legend: **D** = documented by Xfer; **O** = observed in a decoded preset; **C** 
 | Clip sequencer | 12 MIDI clips, notes, launch/playback, keyboard span, MIDI out | D/O | C; factory clip index I; M/R/UI absent |
 | FX rack | 13 effect classes, three splitters, ordered instances, Main/Bus 1/Bus 2 | D/O | C; IR index I; top-level rack/module identity partially M; no R |
 | Asset browser/resolver | Factory/user path, embedded data, missing/ambiguous diagnostics | D/O | Basic local exact-path I; broader import/embedded handling absent |
-| Native ZYG preset | Complete independent patch, ancestry, unknown Serum sidecar | Design requirement | Absent |
-| Native Linux VST3 / CLAP / host state | Audio/MIDI/automation/transport/reload | Design requirement | ZYG-ZXG VST3 discovered by REAPER; one 2.1.2 real-preset project saved, reopened and rendered non-silent audio offline at 48 kHz; GUI/automation/realtime/other rates not yet verified; CLAP absent |
+| Native ZYG preset | Complete independent patch, ancestry, unknown Serum sidecar | Design requirement | v1 partial: `.zygpreset` JSON round-trips identity/oscillators/filters/routes/envelopes/voice-global (`src/Patch.cpp`, unit tested); modulation/FX/LFO/macro/arp/clip/ancestry sidecar not yet covered |
+| Native Linux VST3 / CLAP / host state | Audio/MIDI/automation/transport/reload | Design requirement | ZYG-ZXG VST3 discovered by REAPER; one 2.1.2 real-preset project saved, reopened and rendered non-silent audio offline at 48 kHz; **realtime transport playback verified** (non-zero live track/master peaks during actual playback, `docs/TESTING.md`); a first editable GUI slice exists (PRESET load/new/save, OSC A wavetable + table position) but has not been interactively verified inside REAPER by a human; automation/other sample rates not yet verified; CLAP absent |
 
 ### Implemented parameter assumptions and open questions
 

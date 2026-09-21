@@ -118,6 +118,92 @@ bool ZygProcessor::setAssetRoot(const juce::File& root) {
     return true;
 }
 
+zyg::Patch ZygProcessor::currentPatchCopy() const {
+    const juce::ScopedLock lock(controlLock);
+    const auto* current = slots[std::size_t(requestedIndex.load(std::memory_order_acquire))].get();
+    return current ? *current : zyg::Patch{};
+}
+
+juce::String ZygProcessor::getPresetName() const { return juce::String(currentPatchCopy().name); }
+
+void ZygProcessor::newBlankPatch() {
+    zyg::Patch patch;
+    patch.name = "New patch";
+    patch.oscillators[0].enabled = true;
+    patch.oscillators[0].mode = zyg::OscMode::wavetable;
+    patch.oscillators[0].audio.resize(2048);
+    for (int i = 0; i < 2048; ++i)
+        patch.oscillators[0].audio[std::size_t(i)] = std::sin(juce::MathConstants<double>::twoPi * i / 2048.0);
+    patch.routes[0].target = zyg::RouteTarget::main;
+    if (publish(std::move(patch))) {
+        const juce::ScopedLock lock(controlLock);
+        savedPreset = {};
+        status = "New blank patch";
+    }
+}
+
+bool ZygProcessor::saveNativePreset(const juce::File& file) {
+    try {
+        const auto json = zyg::patchToJson(currentPatchCopy());
+        if (!file.replaceWithText(juce::String(json.dump(2)))) {
+            setStatus("Could not write " + file.getFullPathName()); return false;
+        }
+        setStatus("Saved " + file.getFileName());
+        return true;
+    } catch (const std::exception& error) {
+        setStatus("Save failed: " + juce::String(error.what())); return false;
+    }
+}
+
+bool ZygProcessor::loadNativePreset(const juce::File& file) {
+    try {
+        const auto text = file.loadFileAsString().toStdString();
+        auto patch = zyg::patchFromJson(zyg::Json::parse(text));
+        for (auto& osc : patch.oscillators) {
+            if (!osc.enabled || osc.mode != zyg::OscMode::wavetable || osc.asset.empty()) continue;
+            std::string error;
+            if (!zyg::loadWavetableFromFile(osc, osc.asset, error))
+                patch.diagnostics.push_back({"Oscillator", "missing_asset", error + ": " + osc.asset});
+        }
+        const auto summary = juce::String(zyg::statusSummary(patch));
+        if (!publish(std::move(patch))) { setStatus("Could not hand off patch to audio thread"); return false; }
+        {
+            const juce::ScopedLock lock(controlLock);
+            savedPreset = {};
+            status = "Loaded " + file.getFileName() + " | " + summary;
+        }
+        return true;
+    } catch (const std::exception& error) {
+        setStatus("Load failed: " + juce::String(error.what())); return false;
+    }
+}
+
+ZygProcessor::OscAInfo ZygProcessor::getOscAInfo() const {
+    const auto patch = currentPatchCopy();
+    const auto& osc = patch.oscillators[0];
+    return {osc.enabled, juce::String(zyg::oscModeToString(osc.mode)), juce::String(osc.asset), osc.tablePosition};
+}
+
+void ZygProcessor::setOscATablePosition(double position) {
+    auto patch = currentPatchCopy();
+    patch.oscillators[0].tablePosition = juce::jlimit(0.0, 256.0, position);
+    publish(std::move(patch));
+}
+
+bool ZygProcessor::setOscAWavetableFile(const juce::File& file) {
+    auto patch = currentPatchCopy();
+    auto& osc = patch.oscillators[0];
+    std::string error;
+    const auto path = file.getFullPathName().toStdString();
+    if (!zyg::loadWavetableFromFile(osc, path, error)) { setStatus("Wavetable load failed: " + juce::String(error)); return false; }
+    osc.enabled = true;
+    osc.mode = zyg::OscMode::wavetable;
+    osc.asset = path;
+    if (!publish(std::move(patch))) { setStatus("Could not hand off patch to audio thread"); return false; }
+    setStatus("OSC A wavetable: " + file.getFileName());
+    return true;
+}
+
 void ZygProcessor::getStateInformation(juce::MemoryBlock& destination) {
     juce::MemoryOutputStream stream(destination, false);
     const juce::ScopedLock lock(controlLock);

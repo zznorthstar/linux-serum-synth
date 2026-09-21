@@ -21,12 +21,23 @@
 
 Do not interpret “626 presets decode” as “626 presets load into a compatible synth,” or this one REAPER render as full preset compatibility. The legacy `.fxp` remains unparsed.
 
+## First user-facing GUI slice
+
+`src/PluginEditor.h`/`.cpp` now has a small but real editable surface, not just diagnostics:
+
+- **PRESET**: load `.SerumPreset` (existing), a **New** button for a blank init patch, **Save .zygpreset** for the new native format below, and a live preset-name readout.
+- **OSC A**: a live readout of enabled/mode/wavetable-source, a **Load wavetable (.wav)** picker that loads any local mono RIFF WAVE file as OSC A's table (via the newly public `zyg::loadWavetableFromFile`, factored out of the Serum-asset loader in `src/SerumImporter.cpp` so both paths share one tested decoder), and a table-position slider (0–256, the same provisional range `SynthEngine` already reads) that edits the live patch through the existing lock-free three-slot publish/swap path (`ZygProcessor::currentPatchCopy()` clones the active patch on the message thread, mutates, republishes).
+
+A native `.zygpreset` v1 format now exists (`zyg::patchToJson`/`patchFromJson` in `src/Patch.cpp`, round-trip tested in `tests/core_tests.cpp`): plain JSON covering identity, oscillators, filters, routes, envelopes and voice/global basics -- exactly what this slice edits and what `SynthEngine` renders. It intentionally does not yet round-trip modulation/FX/LFO/macro/arp/clip state (see `docs/PRESET_FORMAT.md`); faking that would misrepresent what gets preserved. Oscillator/filter/route/envelope editing beyond OSC A (B/C, filters, envelopes, routing, modulation, FX, arp/clips) has no GUI yet -- this is one vertical slice through PRESET + OSC A, not a general patch editor.
+
+Not yet built or tested for this GUI: no build has been made to verify these new controls interactively inside REAPER (only `cmake --build`/`ctest` were run -- see Commands below); no `.zygpreset` file has been round-tripped through an actual save/load dialog by a human; wavetable-position automation from a host is untested.
+
 ## Immediate next engineering work
 
 1. Strengthen the fixture-backed semantic map, particularly verified defaults/ranges/scales, unresolved source IDs `39–44/47–48`, modulation destination semantics, oscillator A/B/C enable defaults, and FX splitter nesting. Keep unresolved state explicit; do not wait for theoretical completion before rendering more features.
 2. Add actual modulation DSP early (Env/LFO/macro/velocity → typed destinations), then dual-filter/routing behavior. The current imported user preset has 15 active routes that do not render, making it a strong next regression target.
 3. Replace temporary wavetable interpolation/low-pass fallback with tested bandlimited tables and distinct filter implementations. Expand sample/multisample/granular/spectral/SUB/NOISE and asset resolution in vertical slices using private real presets plus synthetic fixtures.
-4. ~~Verify GUI-based preset loading, REAPER realtime playback~~ REAPER realtime playback is verified (see above). Still needed: GUI-based preset loading/editing (see the new user-facing editor work below), 44.1/96 kHz and buffer-size changes, project reload, automation and failure diagnostics. Build CLAP as a separate format and test independently. Only then consider binary releases.
+4. ~~Verify GUI-based preset loading, REAPER realtime playback~~ REAPER realtime playback is verified (see above). GUI-based preset load/new/save and OSC A editing now exist (see above) but have not been interactively verified inside REAPER by a human. Still needed: extend the editor to B/C oscillators, filters, envelopes, routing; 44.1/96 kHz and buffer-size changes; project reload; automation; failure diagnostics. Build CLAP as a separate format and test independently. Only then consider binary releases.
 
 ## Commands
 

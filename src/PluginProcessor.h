@@ -33,8 +33,22 @@ public:
     juce::String getAssetRoot() const;
     juce::String getStatus() const;
     juce::String getDiagnosticsReport() const;
+
+    // Native preset (.zygpreset) and OSC A editing for the first user-facing
+    // GUI slice. See zyg::patchToJson/patchFromJson for exactly what a
+    // native preset currently covers.
+    juce::String getPresetName() const;
+    void newBlankPatch();
+    bool saveNativePreset(const juce::File& file);
+    bool loadNativePreset(const juce::File& file);
+
+    struct OscAInfo { bool enabled = false; juce::String mode, asset; double tablePosition = 0.0; };
+    OscAInfo getOscAInfo() const;
+    void setOscATablePosition(double position);
+    bool setOscAWavetableFile(const juce::File& file);
 private:
     bool publish(zyg::Patch&& patch);
+    zyg::Patch currentPatchCopy() const;
     void setStatus(juce::String text);
     zyg::SynthEngine engine;
     std::array<std::unique_ptr<zyg::Patch>, 3> slots;

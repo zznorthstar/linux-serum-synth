@@ -16,7 +16,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-The build output is `build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3`. Copy the **whole bundle directory** to `~/.vst3/` and rescan VST3 plugins in REAPER. The initial editor lets you select the root of your own legally obtained Serum content (`Tables`, `Samples`, etc.) and load a `.SerumPreset`. The path and original preset bytes are saved in host state. Current wavetable support accepts a subset of local WAVE files; unsupported state is reported. Do not use this build in irreplaceable projects.
+The build output is `build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3`. Copy the **whole bundle directory** to `~/.vst3/` and rescan VST3 plugins in REAPER. The editor lets you select the root of your own legally obtained Serum content (`Tables`, `Samples`, etc.), load a `.SerumPreset`, start a new blank patch, and save/load a native `.zygpreset` (JSON; covers identity/oscillators/filters/routes/envelopes/voice-global only -- see `docs/PRESET_FORMAT.md`). OSC A exposes wavetable source (load any local mono WAVE file) and table position editing. The path and original preset bytes are saved in host state. Current wavetable support accepts a subset of local WAVE files; unsupported state is reported. Do not use this build in irreplaceable projects.
 
 ## Research tools
 

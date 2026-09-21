@@ -84,4 +84,21 @@ struct Patch {
 
 std::string sourceName(int id);
 std::string statusSummary(const Patch& patch);
+
+// Native ZYG preset format (v1, ".zygpreset"). Covers the fields this
+// vertical slice actually edits/renders: identity, oscillators, filters,
+// routes, envelopes and voice/global basics. Deliberately does not yet
+// round-trip modulation/FX/LFO/macro/arp/clip/unknownSerumState -- none of
+// that is user-editable or rendered yet either (see
+// docs/SERUM2_COMPATIBILITY_MATRIX.md), so silently dropping it here would
+// be misleading; it stays absent rather than faked. Wavetable audio itself
+// is never embedded (asset is a file reference, reloaded via
+// loadWavetableFromFile on read) to avoid ever redistributing Xfer content.
+Json patchToJson(const Patch& patch);
+Patch patchFromJson(const Json& json);
+
+std::string oscModeToString(OscMode mode);
+OscMode oscModeFromString(const std::string& name);
+std::string routeTargetToString(RouteTarget target);
+RouteTarget routeTargetFromString(const std::string& name);
 }

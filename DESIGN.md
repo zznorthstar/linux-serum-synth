@@ -10,4 +10,4 @@ Every imported setting must be inspectable and editable. Show `SERUM IMPORT` ver
 
 The wavetable editor must eventually support drawing, frame operations, morphing/interpolation, audio import, spectral operations, generation, normalization and export. The preset browser should search/tags/author/category/favorites/recents and user folders. Both editors must operate through the independent patch model and non-real-time asset pipeline.
 
-Current status: no GUI has been implemented. These are product design constraints, not a mockup or completed component specification.
+Current status: a first small, functional GUI slice exists (PRESET load/new/save, OSC A wavetable source + table position, per `HANDOFF.md`) using the same panel/cyan-accent language described above, but it does not yet approach the information architecture in this document -- no oscillator B/C/SUB/NOISE, mixer/routing, filters, FX, matrix, envelope/LFO/macro, arp/clip, or preset browser UI. Treat this document as the target, not a description of what exists.

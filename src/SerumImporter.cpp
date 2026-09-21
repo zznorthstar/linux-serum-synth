@@ -146,18 +146,23 @@ void loadWavetable(Patch& patch, Oscillator& osc, int index, const std::filesyst
         diagnostic(patch, "Oscillator" + std::to_string(index), "missing_asset", osc.asset);
         return;
     }
-    if (std::filesystem::file_size(path) > maxFile) {
-        diagnostic(patch, "Oscillator" + std::to_string(index), "unsupported_asset", "wavetable exceeds size limit: " + osc.asset);
-        return;
-    }
+    std::string error;
+    if (!loadWavetableFromFile(osc, path, error))
+        diagnostic(patch, "Oscillator" + std::to_string(index), "unsupported_asset", error + ": " + osc.asset);
+}
+}
+
+bool loadWavetableFromFile(Oscillator& osc, const std::filesystem::path& absolutePath, std::string& error) {
+    if (!std::filesystem::is_regular_file(absolutePath)) { error = "file not found"; return false; }
+    if (std::filesystem::file_size(absolutePath) > maxFile) { error = "file exceeds size limit"; return false; }
     // The current vertical slice accepts mono PCM/IEEE-float RIFF WAVE. This
-    // loader runs only during patch preparation, never in processBlock.
-    std::ifstream in(path, std::ios::binary);
+    // loader must only run off the audio thread (patch preparation or a UI
+    // file-picker callback), never in processBlock.
+    std::ifstream in(absolutePath, std::ios::binary);
     std::vector<std::uint8_t> bytes(std::istreambuf_iterator<char>(in), {});
     if (bytes.size() < 44 || std::string(reinterpret_cast<const char*>(bytes.data()), 4) != "RIFF"
         || std::string(reinterpret_cast<const char*>(bytes.data() + 8), 4) != "WAVE") {
-        diagnostic(patch, "Oscillator" + std::to_string(index), "unsupported_asset", "not RIFF WAVE: " + osc.asset);
-        return;
+        error = "not RIFF WAVE"; return false;
     }
     auto le16 = [&](std::size_t p) { return std::uint16_t(bytes[p] | (bytes[p+1] << 8)); };
     std::uint16_t format = 0, channels = 0, bits = 0;
@@ -174,16 +179,14 @@ void loadWavetable(Patch& patch, Oscillator& osc, int index, const std::filesyst
     }
     if (!dataAt || !channels || !((format == 1 && (bits == 16 || bits == 24 || bits == 32)) ||
                                    (format == 3 && bits == 32))) {
-        diagnostic(patch, "Oscillator" + std::to_string(index), "unsupported_asset", "WAVE encoding: " + osc.asset);
-        return;
+        error = "unsupported WAVE encoding"; return false;
     }
     const std::size_t stride = channels * (bits / 8u);
     const std::size_t frames = dataSize / stride;
     if (frames < osc.frameSize || frames > 16u * 1024u * 1024u) {
-        diagnostic(patch, "Oscillator" + std::to_string(index), "unsupported_asset", "wavetable frame size: " + osc.asset);
-        return;
+        error = "unsupported wavetable frame size"; return false;
     }
-    osc.audio.resize(frames);
+    std::vector<float> audio(frames);
     for (std::size_t i = 0; i < frames; ++i) {
         const auto* sample = bytes.data() + dataAt + i * stride;
         float v = 0.0f;
@@ -203,9 +206,10 @@ void loadWavetable(Patch& patch, Oscillator& osc, int index, const std::filesyst
                            | (std::uint32_t(sample[2]) << 16) | (std::uint32_t(sample[3]) << 24);
             v = std::int32_t(raw) / 2147483648.0f;
         }
-        osc.audio[i] = std::isfinite(v) ? v : 0.0f;
+        audio[i] = std::isfinite(v) ? v : 0.0f;
     }
-}
+    osc.audio = std::move(audio);
+    return true;
 }
 
 SerumDocument decodeSerum(const std::vector<std::uint8_t>& bytes) {
