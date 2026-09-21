@@ -120,6 +120,8 @@ def save_report(report: dict[str, Any], path: str | Path) -> None:
 
 def audit_assets(preset_root: str | Path, index: dict[str, Any]) -> dict[str, Any]:
     root = Path(preset_root)
+    if not root.exists():
+        raise FileNotFoundError(root)
     files = [root] if root.is_file() else sorted(root.rglob("*.SerumPreset"))
     resolver = AssetResolver(index)
     statuses: Counter[str] = Counter()

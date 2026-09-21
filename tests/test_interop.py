@@ -12,6 +12,7 @@ class SerumContainerTests(unittest.TestCase):
             metadata={"fileType": "SerumPreset", "futureHeader": [1, 2]},
             state={"FutureModule0": {"plainParams": {"unknown": 0.7}, "opaque": b"xyz"}},
             container_flags=2,
+            metadata_flags=17,
         )
         self.assertEqual(decode_bytes(encode_bytes(document)), document)
 

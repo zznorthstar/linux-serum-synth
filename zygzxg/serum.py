@@ -30,6 +30,7 @@ class SerumDocument:
     metadata: dict[str, Any]
     state: dict[str, Any]
     container_flags: int
+    metadata_flags: int = 0
 
 
 def decode_bytes(data: bytes) -> SerumDocument:
@@ -67,9 +68,10 @@ def decode_bytes(data: bytes) -> SerumDocument:
         raise PresetFormatError("invalid CBOR state") from exc
     if not isinstance(state, dict):
         raise PresetFormatError("state must be an object")
-    if metadata_flags != 0:
-        raise PresetFormatError(f"unknown metadata flags: {metadata_flags}")
-    return SerumDocument(metadata=metadata, state=state, container_flags=state_flags)
+    return SerumDocument(
+        metadata=metadata, state=state,
+        container_flags=state_flags, metadata_flags=metadata_flags,
+    )
 
 
 def read_preset(path: str | Path) -> SerumDocument:
@@ -88,7 +90,7 @@ def encode_bytes(document: SerumDocument) -> bytes:
     compressed = zstandard.ZstdCompressor(level=3).compress(state)
     return (
         MAGIC
-        + struct.pack("<II", len(metadata), 0)
+        + struct.pack("<II", len(metadata), document.metadata_flags)
         + metadata
         + struct.pack("<II", len(state), document.container_flags)
         + compressed

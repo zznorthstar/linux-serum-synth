@@ -8,7 +8,7 @@ Publicly documented by [serum-preset-packager](https://github.com/KennethWussman
 offset  size  meaning
 0       9    ASCII "XferJson" plus NUL
 9       4    metadata JSON byte length
-13      4    metadata flags (0 in examined presets)
+13      4    metadata flags (0 in examined presets; preserved if unknown)
 17      N    UTF-8 metadata JSON
 17+N    4    uncompressed CBOR byte length
 21+N    4    payload flags (2 in examined presets)

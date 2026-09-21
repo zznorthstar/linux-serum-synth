@@ -51,6 +51,8 @@ def index_content(root: str | Path) -> dict[str, Any]:
     base = Path(root).expanduser().resolve(strict=True)
     if not base.is_dir():
         raise ValueError("asset root must be a directory")
+    if not any((base / category).is_dir() for category in CONTENT_DIRS):
+        raise ValueError("asset root has no recognized Serum content directories")
     entries: list[AssetEntry] = []
     for category in CONTENT_DIRS:
         directory = base / category
