@@ -26,23 +26,30 @@ def _normalize(path: str) -> str:
     return INDEX_PATTERN.sub(lambda match: match.group(1) + "#", path)
 
 
-def _walk(value: Any, path: str, params: Counter, enums: dict[str, set[str]], assets: Counter) -> None:
+def _walk(
+    value: Any, path: str, params: Counter, enums: dict[str, set[str]],
+    assets: Counter, structure: Counter,
+) -> None:
     if isinstance(value, dict):
         for key, child in value.items():
             child_path = f"{path}.{key}" if path else key
+            structure[_normalize(child_path)] += 1
             if key == "plainParams" and isinstance(child, dict):
                 for parameter, setting in child.items():
                     name = _normalize(f"{path}.{parameter}")
                     params[name] += 1
+                    structure[_normalize(child_path + "." + parameter)] += 1
                     if isinstance(setting, str):
                         enums[name].add(setting)
             elif (key.startswith("relativePathTo") or key.endswith("PathRelative")) and isinstance(child, str):
                 assets[_normalize(child_path)] += 1
+            elif key == "files" and isinstance(child, dict):
+                structure[_normalize(child_path + "[]")] += len(child)
             else:
-                _walk(child, child_path, params, enums, assets)
+                _walk(child, child_path, params, enums, assets, structure)
     elif isinstance(value, list):
         for child in value:
-            _walk(child, path + "[]", params, enums, assets)
+            _walk(child, path + "[]", params, enums, assets, structure)
 
 
 def scan(root: str | Path) -> dict[str, Any]:
@@ -52,6 +59,7 @@ def scan(root: str | Path) -> dict[str, Any]:
     module_names: Counter[str] = Counter()
     fx_types: Counter[str] = Counter()
     assets: Counter[str] = Counter()
+    structure: Counter[str] = Counter()
     enums: dict[str, set[str]] = defaultdict(set)
     errors: list[str] = []
     for path in files:
@@ -62,7 +70,7 @@ def scan(root: str | Path) -> dict[str, Any]:
             continue
         for key, value in state.items():
             module_names[_normalize(key)] += 1
-            _walk(value, key, params, enums, assets)
+            _walk(value, key, params, enums, assets, structure)
             if key.startswith("FXRack") and isinstance(value, dict):
                 for effect in value.get("FX", []):
                     if isinstance(effect, dict):
@@ -79,6 +87,7 @@ def scan(root: str | Path) -> dict[str, Any]:
         "string_parameter_values": {key: sorted(value) for key, value in sorted(enums.items())},
         "fx_modules": dict(sorted(fx_types.items())),
         "asset_reference_fields": dict(sorted(assets.items())),
+        "structure_paths": dict(sorted(structure.items())),
     }
 
 
