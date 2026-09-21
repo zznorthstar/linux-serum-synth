@@ -22,7 +22,7 @@ def main() -> None:
     index.add_argument("--output", type=Path)
     resolve = commands.add_parser("resolve-asset", help="resolve an asset against an existing local index")
     resolve.add_argument("index", type=Path)
-    resolve.add_argument("category", choices=("wavetable", "sample", "noise", "multisample", "impulse", "arp", "clip", "lfo_path", "lfo_shape", "preset"))
+    resolve.add_argument("category", choices=("wavetable", "sample", "noise", "multisample", "impulse", "arp", "clip", "lfo_path", "lfo_shape", "arp_bank", "clip_bank", "effect_chain", "pz_filter", "style", "curve", "preset"))
     resolve.add_argument("reference")
     corpus = commands.add_parser("scan-corpus", help="aggregate parameter vocabulary from Serum presets")
     corpus.add_argument("root", type=Path)

@@ -60,11 +60,16 @@ def scan(root: str | Path) -> dict[str, Any]:
     fx_types: Counter[str] = Counter()
     assets: Counter[str] = Counter()
     structure: Counter[str] = Counter()
+    mod_main: Counter[int] = Counter()
+    mod_aux: Counter[int] = Counter()
+    mod_destinations: Counter[str] = Counter()
+    product_versions: Counter[str] = Counter()
     enums: dict[str, set[str]] = defaultdict(set)
     errors: list[str] = []
     for path in files:
         try:
-            state = read_preset(path).state
+            document = read_preset(path)
+            state = document.state
         except (OSError, PresetFormatError) as exc:
             errors.append(f"{path.relative_to(base)}: {exc}")
             continue
@@ -77,6 +82,18 @@ def scan(root: str | Path) -> dict[str, Any]:
                         for child_key in effect:
                             if child_key.startswith("FX"):
                                 fx_types[child_key] += 1
+            if key.startswith("ModSlot") and isinstance(value, dict):
+                source = value.get("source")
+                if isinstance(source, list) and len(source) >= 2:
+                    if isinstance(source[0], int):
+                        mod_main[source[0]] += 1
+                    if isinstance(source[1], int):
+                        mod_aux[source[1]] += 1
+                    target_type = value.get("destModuleTypeString")
+                    target_param = value.get("destModuleParamName")
+                    if isinstance(target_type, str) and isinstance(target_param, str):
+                        mod_destinations[f"{target_type}.{target_param}"] += 1
+        product_versions[str(document.metadata.get("productVersion", "unknown"))] += 1
     return {
         "format": "zygzxg.serum-corpus.v1",
         "preset_files": len(files),
@@ -88,6 +105,12 @@ def scan(root: str | Path) -> dict[str, Any]:
         "fx_modules": dict(sorted(fx_types.items())),
         "asset_reference_fields": dict(sorted(assets.items())),
         "structure_paths": dict(sorted(structure.items())),
+        "modulation_source_ids": {
+            "main": {str(key): value for key, value in sorted(mod_main.items())},
+            "aux": {str(key): value for key, value in sorted(mod_aux.items())},
+        },
+        "modulation_destinations": dict(sorted(mod_destinations.items())),
+        "product_versions": dict(sorted(product_versions.items())),
     }
 
 

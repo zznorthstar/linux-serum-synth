@@ -11,7 +11,8 @@ from typing import Any
 
 CONTENT_DIRS = (
     "Presets", "Tables", "Samples", "Multisamples", "Impulses", "Clips",
-    "Arp Patterns", "LFO Paths", "LFO Shapes", "Skins", "System", "FX Presets",
+    "Arp Patterns", "Arp Banks", "Clip Banks", "Effect Chains", "PZ Filter",
+    "Styles", "Curves", "LFO Paths", "LFO Shapes", "Skins", "System",
 )
 ASSET_DIRS = {
     "wavetable": ("Tables",),
@@ -23,6 +24,12 @@ ASSET_DIRS = {
     "clip": ("Clips",),
     "lfo_path": ("LFO Paths",),
     "lfo_shape": ("LFO Shapes",),
+    "arp_bank": ("Arp Banks",),
+    "clip_bank": ("Clip Banks",),
+    "effect_chain": ("Effect Chains",),
+    "pz_filter": ("PZ Filter",),
+    "style": ("Styles",),
+    "curve": ("Curves",),
     "preset": ("Presets",),
 }
 REFERENCE_FIELDS = {

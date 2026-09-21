@@ -11,9 +11,9 @@ Python 3.11+ is required for the CLI:
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -e .
-zygzxg index-assets /path/to/extracted-or-installed/Serum-content --output /path/to/private/index.json
-zygzxg inspect-preset /path/to/preset.SerumPreset --asset-index /path/to/private/index.json
-zygzxg resolve-asset /path/to/private/index.json wavetable 'S2 Tables/Default Shapes.wav'
+.venv/bin/zygzxg index-assets /path/to/extracted-or-installed/Serum-content --output /path/to/private/index.json
+.venv/bin/zygzxg inspect-preset /path/to/preset.SerumPreset --asset-index /path/to/private/index.json
+.venv/bin/zygzxg resolve-asset /path/to/private/index.json wavetable 'S2 Tables/Default Shapes.wav'
 ```
 
 If running without installing the script entry point, use `PYTHONPATH=. .venv/bin/python -m zygzxg.cli ...`. The content root should directly contain directories such as `Tables`, `Samples`, `Multisamples`, `Presets`, and `Impulses`. The index stores that root's absolute path and should stay private on the user's machine.

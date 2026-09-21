@@ -3,11 +3,11 @@
 ## What exists
 
 - Initial Git repository and source/docs are in place. Supplied executables, screenshot, presets and extracted factory content are Git-ignored.
-- The complete 2.1.5 NSIS installer was listed and selected content roots extracted with `7z` to `.local-serum-content/` without running Windows code. It contains 7,026 indexed files / 1,392,485,649 uncompressed bytes. `7z` could not open the separate updater as an archive; it was not executed.
-- [Official manual](https://www.xferrecords.com/manual/serum-2/docs) and [What's New](https://static.xferrecords.com/Serum%202%20What's%20New.pdf) were reviewed. The available manual describes 2.0.18, while the supplied installer is 2.1.5. The gap needs fixture-based verification.
+- The complete 2.1.5 NSIS installer was listed and all recognized content roots extracted with `7z` to `.local-serum-content/` without running Windows code. It contains 7,357 indexed files / 1,392,825,417 uncompressed bytes. `7z` could not open the separate updater as an archive; it was not executed.
+- [Official manual](https://www.xferrecords.com/manual/serum-2/docs) and [What's New](https://static.xferrecords.com/Serum%202%20What's%20New.pdf) were reviewed. The available manual describes 2.0.18, while the supplied installer is 2.1.5. Its 626 factory presets were authored as 2.0.11–2.0.15; the supplied user preset is 2.1.2. Later feature gaps need fixture-based verification.
 - `zygzxg/serum.py` decodes/encodes the XferJson/Zstandard/CBOR container with size checks. No Serum DSP/Windows code is used. `zygzxg/assets.py` indexes private local content and resolves exact category-relative references. `zygzxg/corpus.py` aggregates observed parameter paths and enums.
-- All 626 factory `.SerumPreset` files decoded, with 515 distinct explicit parameter paths observed. The corpus contains 83 voice-filter IDs and all 13 effect plus three splitter classes. The supplied `SO_IS_bass_press.SerumPreset` decodes and all four external wavetable/noise references resolve against the local index.
-- Four focused unit tests pass for unknown-field round-trip preservation, malformed-frame rejection, asset resolution and multisample child references.
+- All 626 factory `.SerumPreset` files decoded and re-encoded to semantically identical CBOR state, with 515 explicit parameter paths, 799 structural paths, 49 main modulation source IDs, 83 voice-filter IDs and all 13 effect plus three splitter classes observed. All 12,013 required external references resolve against the local content index. The supplied `SO_IS_bass_press.SerumPreset` decodes and all four external wavetable/noise references resolve.
+- Six focused unit tests pass for unknown-field round-trip preservation, malformed-frame rejection, asset resolution, virtual-root path handling and multisample child references.
 
 ## What does not exist
 
@@ -27,6 +27,7 @@ PYTHONPATH=. .venv/bin/python -m unittest discover -s tests -v
 PYTHONPATH=. .venv/bin/python -m zygzxg.cli index-assets .local-serum-content --output .local-serum-content/zygzxg-index.json
 PYTHONPATH=. .venv/bin/python -m zygzxg.cli scan-corpus .local-serum-content/Presets --output docs/SERUM2_CORPUS_SCHEMA.json
 PYTHONPATH=. .venv/bin/python -m zygzxg.cli inspect-preset SO_IS_bass_press.SerumPreset --asset-index .local-serum-content/zygzxg-index.json
+PYTHONPATH=. .venv/bin/python -m zygzxg.cli audit-assets .local-serum-content/Presets .local-serum-content/zygzxg-index.json
 ```
 
 The `.venv` currently has `cbor2` and `zstandard`; recreate it with `pip install -e .` as needed. `reaper`, `cmake`, `ninja`, `g++`, `wine` and `7z` are available on this machine, but no host/plugin test has been run.
