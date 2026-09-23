@@ -38,7 +38,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "OSC A/B/C local RIFF WAVE frames render with editable pitch, level, pan, initial phase, deterministic per-note random phase range, position, unison and detune. Warp, bandlimiting, phase-memory modes and other oscillator modes remain unsupported."
+      "notes": "OSC A/B/C local RIFF WAVE frames render with editable pitch, level, pan, initial phase, deterministic per-note random phase range, position, unison and detune. Control-thread FFT preparation creates ten octave-spaced harmonic mip levels per 2048-sample frame; render-time frequency selection crossfades levels and uses cubic phase interpolation. A synthetic saw test measures more than 20 dB reduction at a known high-note foldback bin. Warp, phase-memory modes and other oscillator modes remain unsupported."
     },
     "sample_oscillator": {
       "researched": "partial",
@@ -114,7 +114,8 @@
       "mapped": "partial",
       "implemented": "partial",
       "tested": "partial",
-      "real_preset_verified": false
+      "real_preset_verified": false,
+      "notes": "Env 1 ADSHR and three native attack/decay/release curve bends render and are tested. Env 2-4, tempo sync, trigger/legato modes and exact Serum curve transfer remain unsupported."
     },
     "lfo": {
       "researched": "partial",
@@ -122,8 +123,8 @@
       "mapped": "partial",
       "implemented": "partial",
       "tested": "partial",
-      "real_preset_verified": false,
-      "notes": "Native sine LFO 1 rate is editable and rendered for supported native matrix routes. Imported LFO shapes, including Square, Custom and Lorenz in supplied presets, are preserved but not rendered."
+      "real_preset_verified": true,
+      "notes": "Native sine LFO 1 plus imported free-running Lorenz, Rossler and random sample-and-hold types render per voice. The supplied 2.0.24 preset executes its original Lorenz LFO 1 to OSC A wavetable-position route. Tempo-synced, Path/custom, mode/direction/phase/rise/delay/smooth semantics remain preserved but unsupported."
     },
     "matrix": {
       "researched": "partial",
@@ -131,8 +132,8 @@
       "mapped": "partial",
       "implemented": "partial",
       "tested": "partial",
-      "real_preset_verified": false,
-      "notes": "All populated imported rows remain typed and visible. Native sine LFO 1 and Macro 1-8 to OSC A WT position or Filter 1 cutoff render; other sources/destinations, aux, curves and slew are preserved but not rendered. Row source/destination/amount are editable within this supported subset."
+      "real_preset_verified": true,
+      "notes": "All populated imported rows remain typed and visible. Native sine, supported imported free-rate LFOs and Macro 1-8 execute for OSC A WT position or Filter 1 cutoff. One real imported Lorenz-to-WT-position route is verified. Other sources/destinations, aux, curves and slew remain preserved but unsupported; row source/destination/amount is editable only within the existing UI subset."
     },
     "macros": {
       "researched": "partial",

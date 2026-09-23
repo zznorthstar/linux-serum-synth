@@ -59,6 +59,22 @@ RouteTarget routeTargetFromString(const std::string& name) {
 }
 
 namespace {
+const char* lfoShapeName(LfoShape shape) {
+    switch (shape) {
+        case LfoShape::sine: return "sine";
+        case LfoShape::lorenz: return "lorenz";
+        case LfoShape::rossler: return "rossler";
+        case LfoShape::randomHold: return "randomHold";
+        default: return "unknown";
+    }
+}
+LfoShape lfoShapeFromName(const std::string& name) {
+    if (name == "sine") return LfoShape::sine;
+    if (name == "lorenz") return LfoShape::lorenz;
+    if (name == "rossler") return LfoShape::rossler;
+    if (name == "randomHold") return LfoShape::randomHold;
+    return LfoShape::unknown;
+}
 Json oscillatorToJson(const Oscillator& osc) {
     return Json{
         {"enabled", osc.enabled}, {"mode", oscModeToString(osc.mode)}, {"modeId", osc.modeId},
@@ -169,6 +185,10 @@ Json patchToJson(const Patch& patch) {
     Json diagnostics = Json::array();
     for (const auto& d : patch.diagnostics)
         diagnostics.push_back({{"path", d.path}, {"status", d.status}, {"detail", d.detail}});
+    Json lfoDefinitions = Json::array();
+    for (const auto& lfo : patch.lfoDefinitions)
+        lfoDefinitions.push_back({{"shape", lfoShapeName(lfo.shape)}, {"rateHz", lfo.rateHz},
+                                  {"tempoSync", lfo.tempoSync}});
     return Json{
         {"zygPresetFormat", 2},
         {"name", patch.name}, {"author", patch.author},
@@ -176,7 +196,8 @@ Json patchToJson(const Patch& patch) {
         {"masterVolume", patch.masterVolume}, {"mono", patch.mono}, {"polyphony", patch.polyphony},
         {"lfoOneRateHz", patch.lfoOneRateHz}, {"lfoOneSine", patch.lfoOneSine},
         {"oscillators", oscillators}, {"filters", filters}, {"routes", routes}, {"envelopes", envelopes},
-        {"modulation", modulation}, {"fx", fx}, {"lfos", patch.lfos}, {"macros", patch.macros},
+        {"modulation", modulation}, {"fx", fx}, {"lfos", patch.lfos},
+        {"lfoDefinitions", lfoDefinitions}, {"macros", patch.macros},
         {"macroValues", patch.macroValues},
         {"arp", patch.arp}, {"clips", patch.clips}, {"global", patch.global},
         {"arpClips", patch.arpClips}, {"midiClips", patch.midiClips},
@@ -251,6 +272,14 @@ Patch patchFromJson(const Json& json) {
             for (std::size_t i = 0; i < dest.size() && i < json.at(key).size(); ++i) dest[i] = json.at(key)[i];
     };
     readArray("lfos", patch.lfos); readArray("macros", patch.macros);
+    if (json.contains("lfoDefinitions") && json.at("lfoDefinitions").is_array()) {
+        const auto& definitions = json.at("lfoDefinitions");
+        for (std::size_t i = 0; i < patch.lfoDefinitions.size() && i < definitions.size(); ++i) {
+            patch.lfoDefinitions[i].shape = lfoShapeFromName(definitions[i].value("shape", std::string{"unknown"}));
+            patch.lfoDefinitions[i].rateHz = definitions[i].value("rateHz", 1.0);
+            patch.lfoDefinitions[i].tempoSync = definitions[i].value("tempoSync", false);
+        }
+    }
     if (json.contains("macroValues") && json.at("macroValues").is_array())
         for (std::size_t i = 0; i < patch.macroValues.size() && i < json.at("macroValues").size(); ++i)
             patch.macroValues[i] = json.at("macroValues")[i].get<double>();

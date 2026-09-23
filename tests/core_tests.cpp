@@ -1,5 +1,6 @@
 #include "SerumImporter.h"
 #include "SynthEngine.h"
+#include "Wavetable.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -73,6 +74,69 @@ int main() {
         for (std::size_t i = 0; i < randomA.size(); ++i)
             phaseDifference += std::abs(randomA[i] - randomB[i]);
         if (phaseDifference < 0.01) throw std::runtime_error("random phase had no rendered effect");
+
+        // Envelope curve values are native DSP state, not display-only data.
+        // Opposite attack bends must produce measurably different onset energy.
+        auto attackEnergy = [&](double curve) {
+            auto patch = init;
+            patch.envelopes[0].attack = 0.1;
+            patch.envelopes[0].curve[0] = curve;
+            synth.setPatch(&patch); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+            std::vector<float> output(2400), other(2400);
+            synth.render(output.data(), other.data(), 0, int(output.size()));
+            double energy = 0.0;
+            for (float sample : output) energy += sample * sample;
+            return energy;
+        };
+        const double slowAttackEnergy = attackEnergy(0.0);
+        const double fastAttackEnergy = attackEnergy(100.0);
+        if (!(fastAttackEnergy > slowAttackEnergy * 4.0))
+            throw std::runtime_error("envelope attack curve did not affect DSP shape");
+
+        // Arbitrary wavetables must be prepared into harmonic-limited mip
+        // levels off the audio thread, and the oscillator must select those
+        // levels at high pitch. Bin 192 is the foldback of the saw's 20th
+        // harmonic for this exact-bin render; it should be strongly reduced.
+        zyg::Patch rawSaw;
+        auto& saw = rawSaw.oscillators[0];
+        saw.enabled = true;
+        saw.mode = zyg::OscMode::wavetable;
+        saw.frameSize = 2048;
+        saw.audio.resize(2048);
+        for (std::size_t i = 0; i < saw.audio.size(); ++i)
+            saw.audio[i] = float(2.0 * double(i) / double(saw.audio.size()) - 1.0);
+        rawSaw.routes[0].target = zyg::RouteTarget::main;
+        rawSaw.envelopes[0].attack = 0.0;
+        rawSaw.envelopes[0].hold = 1.0;
+        rawSaw.masterVolume = 1.0;
+        auto bandlimitedSaw = rawSaw;
+        zyg::prepareWavetableMipmaps(bandlimitedSaw.oscillators[0]);
+        if (bandlimitedSaw.oscillators[0].wavetableMipLevels != 10
+            || !bandlimitedSaw.oscillators[0].wavetableMipmaps
+            || bandlimitedSaw.oscillators[0].wavetableMipmaps->size() != 10 * 2048)
+            throw std::runtime_error("wavetable mipmap preparation produced the wrong layout");
+        constexpr int spectralSize = 4096;
+        const double highNoteHz = 440.0 * std::exp2((108.0 - 69.0) / 12.0);
+        const double exactBinSampleRate = highNoteHz * spectralSize / 400.0;
+        auto foldedBinMagnitude = [&](zyg::Patch& patch) {
+            zyg::SynthEngine oscillator;
+            oscillator.prepare(exactBinSampleRate);
+            oscillator.setPatch(&patch);
+            oscillator.noteOn(1, 108, 1.0f);
+            std::vector<float> output(spectralSize), other(spectralSize);
+            oscillator.render(output.data(), other.data(), 0, spectralSize);
+            double real = 0.0, imaginary = 0.0;
+            for (int i = 0; i < spectralSize; ++i) {
+                const double angle = 6.283185307179586 * 192.0 * i / spectralSize;
+                real += output[std::size_t(i)] * std::cos(angle);
+                imaginary -= output[std::size_t(i)] * std::sin(angle);
+            }
+            return std::hypot(real, imaginary);
+        };
+        const double rawFoldback = foldedBinMagnitude(rawSaw);
+        const double limitedFoldback = foldedBinMagnitude(bandlimitedSaw);
+        if (!(rawFoldback > 1.0 && limitedFoldback < rawFoldback * 0.1))
+            throw std::runtime_error("bandlimited wavetable oscillator did not suppress high-pitch foldback");
         // A UI patch handoff must not silence a held note. The filter edit
         // must change the waveform while the voice continues to render.
         auto edited = init;
@@ -164,6 +228,32 @@ int main() {
         if(!(macroEnergy < referenceEnergy*0.01))
             throw std::runtime_error("Macro 1 to WT position route did not affect audio");
 
+        auto chaosMoving = moving;
+        chaosMoving.modulation[0].sourceKind = zyg::ModSource::lfo;
+        chaosMoving.modulation[0].sourceIndex = 0;
+        chaosMoving.lfoOneSine = false;
+        chaosMoving.lfoDefinitions[0].shape = zyg::LfoShape::lorenz;
+        chaosMoving.lfoDefinitions[0].rateHz = 3.0;
+        synth.setPatch(&chaosMoving); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, int(left.size()));
+        double chaosEnergy = 0.0;
+        for (float sample : left) {
+            if (!std::isfinite(sample)) throw std::runtime_error("Lorenz LFO made render non-finite");
+            chaosEnergy += sample * sample;
+        }
+        if (!(chaosEnergy < referenceEnergy * 0.8 && chaosEnergy > referenceEnergy * 0.01))
+            throw std::runtime_error("Lorenz LFO route did not affect wavetable position");
+        auto unsupportedMoving = chaosMoving;
+        unsupportedMoving.lfoDefinitions[0].shape = zyg::LfoShape::unknown;
+        synth.setPatch(&unsupportedMoving); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, int(left.size()));
+        double unsupportedEnergy = 0.0;
+        for (float sample : left) unsupportedEnergy += sample * sample;
+        if (std::abs(unsupportedEnergy - referenceEnergy) > referenceEnergy * 1e-6)
+            throw std::runtime_error("unsupported imported LFO silently applied constant modulation");
+
         zyg::Patch subPatch;
         subPatch.oscillators[4].enabled = true;
         subPatch.oscillators[4].mode = zyg::OscMode::sub;
@@ -205,6 +295,13 @@ int main() {
                 throw std::runtime_error("explicit parameter accounting is incomplete");
             for (const auto& fx : patch.fx)
                 if (fx.type.empty()) throw std::runtime_error("FX module identity was dropped");
+            bool hasRenderedImportedLfo = false;
+            for (const auto& lfo : patch.lfoDefinitions)
+                hasRenderedImportedLfo |= lfo.shape == zyg::LfoShape::lorenz
+                    || lfo.shape == zyg::LfoShape::rossler || lfo.shape == zyg::LfoShape::randomHold;
+            if (hasRenderedImportedLfo && std::none_of(patch.diagnostics.begin(), patch.diagnostics.end(),
+                    [](const zyg::Diagnostic& d) { return d.status == "dsp_active" && d.path.starts_with("LFO"); }))
+                throw std::runtime_error("rendered imported LFO was not reported as DSP-active");
             synth.setPatch(&patch);
             synth.noteOn(1, 48, 1.0f);
             std::fill(left.begin(), left.end(), 0);
@@ -234,6 +331,7 @@ int main() {
             original.envelopes[0].attack = 0.02;
             original.envelopes[0].sustain = 0.8;
             original.lfoOneRateHz = 2.5;
+            original.lfoDefinitions[0] = {zyg::LfoShape::lorenz, 0.75, false};
             original.macroValues[0] = 0.75;
             original.modulation.push_back({});
             original.modulation[0].source = 6;
@@ -252,6 +350,8 @@ int main() {
                 restored.modulation[0].sourceKind != zyg::ModSource::lfo ||
                 restored.modulation[0].targetKind != zyg::ModTarget::wavetablePosition ||
                 restored.fx.size() != 1 || restored.lfoOneRateHz != 2.5 || restored.macroValues[0] != 0.75 ||
+                restored.lfoDefinitions[0].shape != zyg::LfoShape::lorenz
+                || restored.lfoDefinitions[0].rateHz != 0.75 ||
                 restored.unknownSerumState != original.unknownSerumState ||
                 restored.originalPreset != original.originalPreset || restored.diagnostics.size() != 1)
                 throw std::runtime_error(".zygpreset round trip lost modulation, FX or Serum provenance");

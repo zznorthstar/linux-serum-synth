@@ -1,4 +1,5 @@
 #include "SerumImporter.h"
+#include "Wavetable.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -85,7 +86,15 @@ bool firstSliceRenders(const std::string& path) {
         return true;
     if (path.starts_with("Env0."))
         return path == "Env0.kParamAttack" || path == "Env0.kParamHold" || path == "Env0.kParamDecay" ||
-               path == "Env0.kParamSustain" || path == "Env0.kParamRelease";
+               path == "Env0.kParamSustain" || path == "Env0.kParamRelease" ||
+               path == "Env0.kParamCurve1" || path == "Env0.kParamCurve2" || path == "Env0.kParamCurve3";
+    if (path.starts_with("LFO"))
+        return path.ends_with(".kParamRate") || path.ends_with(".kParamType")
+            || path.ends_with(".kParamBeatSync");
+    if (path.starts_with("Macro") && path.ends_with(".kParamValue")) return true;
+    if (path.starts_with("ModSlot"))
+        return path.ends_with(".kParamAmount") || path.ends_with(".kParamBipolar")
+            || path.ends_with(".kParamBypass");
     if (path == "VoiceFilter0.kParamEnable" || path == "VoiceFilter0.kParamFreq" ||
         path == "VoiceFilter0.kParamReso" || path == "VoiceFilter0.kParamDrive" ||
         path == "VoiceFilter0.kParamWet") return true;
@@ -97,6 +106,7 @@ bool firstSliceRenders(const std::string& path) {
             path == osc + "kParamUnison" || path == osc + "kParamDetune" ||
             path == osc + "WTOsc" + std::to_string(i) + ".kParamTablePos" ||
             path == osc + "WTOsc" + std::to_string(i) + ".kParamInitialPhase" ||
+            path == osc + "WTOsc" + std::to_string(i) + ".kParamRandomPhase" ||
             path == "RoutingSlot" + std::to_string(i) + ".kParamRoutingDest") return true;
     }
     return false;
@@ -214,6 +224,7 @@ bool loadWavetableFromFile(Oscillator& osc, const std::filesystem::path& absolut
         audio[i] = std::isfinite(v) ? v : 0.0f;
     }
     osc.audio = std::move(audio);
+    prepareWavetableMipmaps(osc);
     return true;
 }
 
@@ -367,6 +378,22 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         countMapped(patch, p, "RoutingSlot" + std::to_string(i), {"kParamRoutingDest", "kParamFilterBalance", "kParamFXBus1Level", "kParamFXBus2Level"});
         if (route.fxBus1Level || route.fxBus2Level) diagnostic(patch, "RoutingSlot" + std::to_string(i), "not_rendered", "FX bus send retained");
     }
+    for (int i = 0; i < 10; ++i) {
+        patch.lfos[i] = obj(doc.state, "LFO" + std::to_string(i));
+        const auto& lp = params(patch.lfos[i]);
+        patch.lfoDefinitions[i].rateHz = number(lp, "kParamRate", 1.0);
+        patch.lfoDefinitions[i].tempoSync = active(lp, "kParamBeatSync", false);
+        const auto type = string(lp, "kParamType");
+        if (type == "Lorenz") patch.lfoDefinitions[i].shape = LfoShape::lorenz;
+        else if (type == "Rossler") patch.lfoDefinitions[i].shape = LfoShape::rossler;
+        else if (type == "RandomSH") patch.lfoDefinitions[i].shape = LfoShape::randomHold;
+        countMapped(patch, lp, "LFO" + std::to_string(i), {"kParamRate", "kParamType", "kParamBeatSync"});
+        const bool rendered = patch.lfoDefinitions[i].shape != LfoShape::unknown
+            && !patch.lfoDefinitions[i].tempoSync;
+        if (!lp.empty()) diagnostic(patch, "LFO" + std::to_string(i), rendered ? "dsp_active" : "not_rendered",
+            rendered ? "native free-rate LFO generator active" : "LFO shape or tempo-sync mode retained");
+    }
+    patch.lfoOneSine = false;
     for (int i = 0; i < 64; ++i) {
         const auto key = "ModSlot" + std::to_string(i);
         const Json& m = obj(doc.state, key);
@@ -399,19 +426,25 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         route.additional = m;
         countMapped(patch, p, key, {"kParamAmount", "kParamBipolar", "kParamBypass"});
         patch.modulation.push_back(std::move(route));
-        diagnostic(patch, key, "not_rendered", "modulation route retained, DSP matrix pending");
     }
-    for (int i = 0; i < 10; ++i) {
-        patch.lfos[i] = obj(doc.state, "LFO" + std::to_string(i));
-        if (!params(patch.lfos[i]).empty()) diagnostic(patch, "LFO" + std::to_string(i), "not_rendered", "LFO retained");
-    }
-    patch.lfoOneSine = false;
     for (int i = 0; i < 8; ++i) {
         const auto key = "Macro" + std::to_string(i);
         patch.macros[i] = obj(doc.state, key);
         const auto& mp = params(patch.macros[i]);
         patch.macroValues[i] = std::clamp(number(mp, "kParamValue", 0.0) / 100.0, 0.0, 1.0);
         countMapped(patch, mp, key, {"kParamValue"});
+    }
+    for (const auto& route : patch.modulation) {
+        const bool targetRendered = (route.targetKind == ModTarget::wavetablePosition && route.targetIndex == 0)
+            || (route.targetKind == ModTarget::filterCutoff && route.targetIndex == 0);
+        const bool sourceRendered = route.sourceKind == ModSource::macro
+            || (route.sourceKind == ModSource::lfo && route.sourceIndex >= 0 && route.sourceIndex < 10
+                && patch.lfoDefinitions[std::size_t(route.sourceIndex)].shape != LfoShape::unknown
+                && !patch.lfoDefinitions[std::size_t(route.sourceIndex)].tempoSync);
+        diagnostic(patch, "ModSlot" + std::to_string(route.slot),
+            targetRendered && sourceRendered && route.auxiliary == 0 ? "dsp_active" : "not_rendered",
+            targetRendered && sourceRendered && route.auxiliary == 0
+                ? "native modulation route active" : "modulation route retained, DSP matrix pending");
     }
     for (int rack = 0; rack < 3; ++rack) {
         const Json& r = obj(doc.state, "FXRack" + std::to_string(rack));

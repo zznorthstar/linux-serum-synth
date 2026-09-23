@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Wavetable.h"
 #include <cstdlib>
 #include <cmath>
 #include <algorithm>
@@ -63,6 +64,7 @@ void prepareAudioAssets(zyg::Patch& patch) {
             osc.audio.resize(2048);
             for (int i = 0; i < 2048; ++i)
                 osc.audio[std::size_t(i)] = std::sin(juce::MathConstants<double>::twoPi * i / 2048.0);
+            zyg::prepareWavetableMipmaps(osc);
             continue;
         }
         std::filesystem::path path(osc.asset);
@@ -87,6 +89,7 @@ ZygProcessor::ZygProcessor()
     init->oscillators[0].audio.resize(2048);
     for (int i = 0; i < 2048; ++i)
         init->oscillators[0].audio[std::size_t(i)] = std::sin(juce::MathConstants<double>::twoPi * i / 2048.0);
+    zyg::prepareWavetableMipmaps(init->oscillators[0]);
     init->routes[0].target = zyg::RouteTarget::main;
     slots[0] = std::move(init);
     engine.setPatch(slots[0].get());
@@ -236,6 +239,7 @@ void ZygProcessor::newBlankPatch() {
     patch.oscillators[0].audio.resize(2048);
     for (int i = 0; i < 2048; ++i)
         patch.oscillators[0].audio[std::size_t(i)] = std::sin(juce::MathConstants<double>::twoPi * i / 2048.0);
+    zyg::prepareWavetableMipmaps(patch.oscillators[0]);
     patch.routes[0].target = zyg::RouteTarget::main;
     if (publish(std::move(patch))) {
         const juce::ScopedLock lock(controlLock);

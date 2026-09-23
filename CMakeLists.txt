@@ -25,7 +25,8 @@ find_library(ZSTD_LIBRARY NAMES zstd REQUIRED)
 add_library(zygzxg_core STATIC
     src/Patch.cpp
     src/SerumImporter.cpp
-    src/SynthEngine.cpp)
+    src/SynthEngine.cpp
+    src/Wavetable.cpp)
 target_include_directories(zygzxg_core PUBLIC src)
 target_link_libraries(zygzxg_core PUBLIC nlohmann_json::nlohmann_json ${ZSTD_LIBRARY})
 set_target_properties(zygzxg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)

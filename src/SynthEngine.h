@@ -19,8 +19,11 @@ private:
         std::uint64_t age = 0;
         float velocity = 0;
         enum Stage { attack, hold, decay, sustain, release } stage = attack;
-        double amp = 0, releaseStep = 0, stageSeconds = 0;
-        double lfoPhase = 0;
+        double amp = 0, releaseStartAmp = 0, releaseDuration = 0, stageSeconds = 0;
+        std::array<double, 10> lfoPhase {};
+        std::array<std::array<double, 3>, 10> chaosState {};
+        std::array<double, 10> randomHold {};
+        std::array<std::uint32_t, 10> lfoRandomState {};
         double noisePosition = 0;
         std::uint32_t noiseState = 0x9e3779b9u;
         std::array<std::array<double, 16>, 5> phase {};
@@ -33,6 +36,7 @@ private:
     double sampleRate_ = 44100;
     std::uint64_t clock_ = 0;
     double envelope(Voice& voice) noexcept;
+    double lfoValue(Voice& voice, int index) noexcept;
     float oscillatorSample(Voice& voice, int index, const Oscillator& osc, double position) noexcept;
 };
 }

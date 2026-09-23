@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
@@ -13,6 +14,13 @@ enum class OscMode { wavetable, sample, multisample, granular, spectral, sub, no
 enum class RouteTarget { filter, main, direct, none, unknown };
 enum class ModSource { unknown, lfo, macro };
 enum class ModTarget { unknown, wavetablePosition, filterCutoff };
+enum class LfoShape { unknown, sine, lorenz, rossler, randomHold };
+
+struct LfoDefinition {
+    LfoShape shape = LfoShape::unknown;
+    double rateHz = 1.0;
+    bool tempoSync = false;
+};
 
 struct Envelope {
     double attack = 0.005, hold = 0.0, decay = 2.0, sustain = 1.0, release = 0.075;
@@ -31,6 +39,11 @@ struct Oscillator {
     std::string warpOne, warpTwo;
     double warpOneAmount = 0.0, warpTwoAmount = 0.0;
     std::vector<float> audio; // prepared on the control thread from a user-owned asset
+    // Successive octave-bandlimited copies of `audio`, excluding the raw
+    // level. Each complete level has audio.size() samples. This cache is
+    // derived on the control thread and is intentionally not serialized.
+    std::shared_ptr<const std::vector<float>> wavetableMipmaps;
+    unsigned wavetableMipLevels = 0;
     unsigned frameSize = 2048;
     double sampleRate = 44100.0; // for sample-backed NOISE playback
     Json modeState;
@@ -83,6 +96,7 @@ struct Patch {
     std::vector<ModulationRoute> modulation;
     std::vector<FxModule> fx;
     std::array<Json, 10> lfos;
+    std::array<LfoDefinition, 10> lfoDefinitions;
     std::array<Json, 8> macros;
     std::array<double, 8> macroValues {};
     Json arp, clips, global, unknownSerumState;
