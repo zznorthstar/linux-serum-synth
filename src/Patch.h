@@ -11,6 +11,8 @@ using Json = nlohmann::json;
 
 enum class OscMode { wavetable, sample, multisample, granular, spectral, sub, noise, unknown };
 enum class RouteTarget { filter, main, direct, none, unknown };
+enum class ModSource { unknown, lfo, macro };
+enum class ModTarget { unknown, wavetablePosition, filterCutoff };
 
 struct Envelope {
     double attack = 0.005, hold = 0.0, decay = 2.0, sustain = 1.0, release = 0.075;
@@ -22,6 +24,7 @@ struct Oscillator {
     OscMode mode = OscMode::unknown;
     std::string modeId;
     std::string asset;
+    bool userSelectedAsset = false;
     int octave = 0, semitone = 0, unison = 1;
     double fine = 0.0, volume = 0.75, pan = 0.0, detune = 0.2;
     double tablePosition = 0.0, initialPhase = 0.0, randomPhase = 0.0;
@@ -29,6 +32,7 @@ struct Oscillator {
     double warpOneAmount = 0.0, warpTwoAmount = 0.0;
     std::vector<float> audio; // prepared on the control thread from a user-owned asset
     unsigned frameSize = 2048;
+    double sampleRate = 44100.0; // for sample-backed NOISE playback
     Json modeState;
     Json additional;
 };
@@ -46,6 +50,10 @@ struct Route {
 };
 struct ModulationRoute {
     int slot = 0, source = 0, auxiliary = 0, destinationInstance = 0, destinationParameterId = -1;
+    ModSource sourceKind = ModSource::unknown;
+    int sourceIndex = 0;
+    ModTarget targetKind = ModTarget::unknown;
+    int targetIndex = 0;
     std::string sourceName, destinationModule, destinationParameter;
     double amount = 0.0;
     bool bipolar = false, bypass = false;
@@ -66,6 +74,8 @@ struct Patch {
     double masterVolume = 0.7;
     bool mono = false;
     int polyphony = 16;
+    double lfoOneRateHz = 1.0;
+    bool lfoOneSine = true; // native sine; unsupported imported LFO shapes stay visible as raw state
     std::array<Oscillator, 5> oscillators;
     std::array<Filter, 2> filters;
     std::array<Route, 7> routes;
@@ -74,6 +84,7 @@ struct Patch {
     std::vector<FxModule> fx;
     std::array<Json, 10> lfos;
     std::array<Json, 8> macros;
+    std::array<double, 8> macroValues {};
     Json arp, clips, global, unknownSerumState;
     std::array<Json, 12> arpClips, midiClips;
     std::vector<Diagnostic> diagnostics;
@@ -85,15 +96,10 @@ struct Patch {
 std::string sourceName(int id);
 std::string statusSummary(const Patch& patch);
 
-// Native ZYG preset format (v1, ".zygpreset"). Covers the fields this
-// vertical slice actually edits/renders: identity, oscillators, filters,
-// routes, envelopes and voice/global basics. Deliberately does not yet
-// round-trip modulation/FX/LFO/macro/arp/clip/unknownSerumState -- none of
-// that is user-editable or rendered yet either (see
-// docs/SERUM2_COMPATIBILITY_MATRIX.md), so silently dropping it here would
-// be misleading; it stays absent rather than faked. Wavetable audio itself
-// is never embedded (asset is a file reference, reloaded via
-// loadWavetableFromFile on read) to avoid ever redistributing Xfer content.
+// Native ZYG preset format (v2, ".zygpreset"). Serializes the independent
+// patch and preservation sidecar, including unsupported imported state.
+// Audio assets remain local file references and are reloaded off the audio
+// thread. Serialization of state does not imply DSP/UI support for it.
 Json patchToJson(const Patch& patch);
 Patch patchFromJson(const Json& json);
 

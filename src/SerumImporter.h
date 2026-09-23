@@ -11,6 +11,9 @@ SerumDocument decodeSerum(const std::vector<std::uint8_t>& bytes);
 Patch importSerum(const SerumDocument& document, const std::filesystem::path& assetRoot,
                   const std::string& sourcePath = {});
 Patch loadSerumFile(const std::filesystem::path& file, const std::filesystem::path& assetRoot);
+// Upgrade experimental v2 native/host state whose routes predate typed ZYG
+// source/destination fields. This translation stays in the Serum adapter.
+void mapLegacySerumModulationRoutes(Patch& patch);
 
 // Decodes a mono PCM/IEEE-float RIFF WAVE file at an absolute path directly
 // into osc.audio (frames of osc.frameSize samples each, as SynthEngine

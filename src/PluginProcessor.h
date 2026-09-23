@@ -4,6 +4,7 @@
 #include "SynthEngine.h"
 #include <atomic>
 #include <memory>
+#include <functional>
 
 class ZygProcessor final : public juce::AudioProcessor {
 public:
@@ -34,18 +35,25 @@ public:
     juce::String getStatus() const;
     juce::String getDiagnosticsReport() const;
 
-    // Native preset (.zygpreset) and OSC A editing for the first user-facing
-    // GUI slice. See zyg::patchToJson/patchFromJson for exactly what a
-    // native preset currently covers.
+    // Native patch and editor control operations. File preparation and patch
+    // cloning run off the audio thread before the immutable handoff.
     juce::String getPresetName() const;
     void newBlankPatch();
     bool saveNativePreset(const juce::File& file);
     bool loadNativePreset(const juce::File& file);
+    zyg::Patch getPatchSnapshot() const;
+    bool editPatch(const std::function<void(zyg::Patch&)>& edit);
+    float getOutputPeak() const noexcept { return outputPeak.load(std::memory_order_relaxed); }
+    int getActiveVoiceCount() const noexcept { return activeVoices.load(std::memory_order_relaxed); }
+    unsigned getMidiNoteCount() const noexcept { return midiNotes.load(std::memory_order_relaxed); }
+    void setAuditionHeld(bool held) noexcept { auditionHeld.store(held, std::memory_order_relaxed); }
 
     struct OscAInfo { bool enabled = false; juce::String mode, asset; double tablePosition = 0.0; };
     OscAInfo getOscAInfo() const;
     void setOscATablePosition(double position);
     bool setOscAWavetableFile(const juce::File& file);
+    bool setOscWavetableFile(int index, const juce::File& file);
+    bool setNoiseSampleFile(const juce::File& file);
 private:
     bool publish(zyg::Patch&& patch);
     zyg::Patch currentPatchCopy() const;
@@ -56,5 +64,10 @@ private:
     mutable juce::CriticalSection controlLock;
     juce::String assetRoot, status;
     juce::MemoryBlock savedPreset;
+    std::atomic<float> outputPeak {0.0f};
+    std::atomic<int> activeVoices {0};
+    std::atomic<unsigned> midiNotes {0};
+    std::atomic<bool> auditionHeld {false};
+    bool auditionVoiceActive = false; // audio thread only
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZygProcessor)
 };

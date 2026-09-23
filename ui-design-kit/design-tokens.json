@@ -1,0 +1,211 @@
+{
+  "theme": "Dark and Mysterious Pixel Art",
+  "canvas": {
+    "width": 1000,
+    "height": 600,
+    "scaling": "1:1 pixel art (nearest neighbor, no anti-aliasing)"
+  },
+  "palette": {
+    "background": {
+      "void": "#08060D",
+      "chassis": "#100B1B",
+      "panel": "#181126",
+      "panelRaised": "#231838",
+      "wellSunken": "#0C0914"
+    },
+    "borders": {
+      "darkShadow": "#0A0710",
+      "neutral": "#31224D",
+      "lightHighlight": "#4D3678"
+    },
+    "acidGreen": {
+      "hotPip": "#D6FF85",
+      "primary": "#39FF14",
+      "dim": "#24A812",
+      "shadow": "#0F380A"
+    },
+    "evilPurple": {
+      "neonAccent": "#D84CFF",
+      "primary": "#8A1FDF",
+      "dim": "#57148C",
+      "deepShade": "#2B0A45"
+    },
+    "text": {
+      "highContrast": "#F0FFF2",
+      "body": "#A6B4A8",
+      "muted": "#59635A",
+      "lcdDigit": "#63FF46"
+    },
+    "statusAndMod": {
+      "crimsonBright": "#FF2A55",
+      "crimsonDim": "#8A112A",
+      "amberBright": "#FF9900",
+      "amberDim": "#7A4900"
+    }
+  },
+  "metrics": {
+    "knobs": {
+      "small": {
+        "width": 32,
+        "height": 32,
+        "sheetWidth": 32,
+        "sheetHeight": 4096,
+        "frames": 128
+      },
+      "medium": {
+        "width": 48,
+        "height": 48,
+        "sheetWidth": 48,
+        "sheetHeight": 6144,
+        "frames": 128
+      },
+      "large": {
+        "width": 64,
+        "height": 64,
+        "sheetWidth": 64,
+        "sheetHeight": 8192,
+        "frames": 128
+      }
+    },
+    "panels": {
+      "wavetable2D": { "width": 180, "height": 96 },
+      "filterResponse": { "width": 180, "height": 96 },
+      "envelopeEditor": { "width": 360, "height": 120 },
+      "lfoEditor": { "width": 360, "height": 120 },
+      "subOscillator": { "width": 150, "height": 96 },
+      "noiseOscillator": { "width": 150, "height": 96 },
+      "masterTopBar": { "width": 420, "height": 34 }
+    },
+    "faders": {
+      "trackWidth": 12,
+      "trackHeight": 100,
+      "trenchWidth": 6,
+      "thumbWidth": 18,
+      "thumbHeight": 12
+    },
+    "buttons": {
+      "standardHeight": 24,
+      "iconSize": 16,
+      "tabHeight": 24,
+      "warpButton": { "width": 76, "height": 20 },
+      "warpMenu": { "width": 116, "height": 144 }
+    },
+    "bottomDock": {
+      "pitchWheel": { "width": 24, "height": 48 },
+      "modWheel": { "width": 24, "height": 48 },
+      "keyboard": { "width": 480, "height": 48, "whiteKeys": 14, "blackKeys": 10 }
+    },
+    "fxRack": {
+      "sidebar": { "width": 120, "height": 340 },
+      "addMenu": { "width": 140, "height": 260 },
+      "moduleWidth": 420,
+      "moduleHeight": 110,
+      "modules": [
+        "distortion",
+        "compressor",
+        "delay",
+        "reverb",
+        "equalizer",
+        "filter",
+        "splitter",
+        "chorus",
+        "flanger",
+        "phaser",
+        "hyperDimension",
+        "bode",
+        "convolve",
+        "utility"
+      ],
+      "splitterContainers": {
+        "width": 600,
+        "height": 120,
+        "crossoverBarHeight": 12,
+        "laneHeight": 76,
+        "modes": [
+          {
+            "name": "splitterLMH",
+            "bands": ["LOW (<210Hz)", "MIDS (210-1000Hz)", "HIGHS (>1000Hz)"],
+            "defaultCrossovers": [210, 1000]
+          },
+          {
+            "name": "splitterLH",
+            "bands": ["LOW (<350Hz)", "HIGH (>350Hz)"],
+            "defaultCrossovers": [350]
+          },
+          {
+            "name": "splitterMS",
+            "bands": ["MID (L+R)", "SIDE (L-R)"],
+            "matrix": "MS_ENCODE"
+          }
+        ]
+      }
+    },
+    "matrix": {
+      "panel": { "width": 960, "height": 360 },
+      "rowHeight": 38,
+      "columns": [
+        { "name": "source", "width": 120 },
+        { "name": "arrow", "width": 14 },
+        { "name": "destination", "width": 178 },
+        { "name": "type", "width": 60 },
+        { "name": "curve", "width": 70 },
+        { "name": "amount", "width": 180 },
+        { "name": "polarity", "width": 80 },
+        { "name": "aux", "width": 90 },
+        { "name": "bypass", "width": 60 },
+        { "name": "delete", "width": 42 }
+      ],
+      "slotSelector": { "width": 130, "height": 22 },
+      "slotDropdown": { "width": 140, "height": 196 },
+      "horizontalSlider": { "width": 140, "height": 16 },
+      "curveIconSize": { "width": 18, "height": 18 },
+      "polarityToggleSize": { "width": 36, "height": 18 }
+    },
+    "wavetableEditor": {
+      "drawCanvas": {
+        "width": 600,
+        "height": 240,
+        "toolbarHeight": 22,
+        "rulers": {
+          "amplitudeRange": [-1.0, 1.0],
+          "phaseSubdivisions": ["0 deg", "90 deg", "180 deg", "270 deg", "360 deg"]
+        },
+        "tools": ["DRAW", "LINE", "ARC", "SMOOTH", "NORM"]
+      },
+      "fftHarmonicBins": {
+        "width": 600,
+        "height": 120,
+        "binCount": 64,
+        "amplitudeRange": [0.0, 1.0],
+        "phaseRange": [-180, 180]
+      },
+      "frameStrip": {
+        "width": 600,
+        "height": 48,
+        "thumbnailSlots": 10,
+        "thumbnailSize": { "width": 48, "height": 40 },
+        "totalFrames": 256
+      },
+      "formulaParser": {
+        "inputField": { "width": 300, "height": 24 },
+        "terminalPrompt": "> ",
+        "exampleFormula": "y = sin(x*pi) + 0.3*cos(3*x*pi)"
+      },
+      "morphSelector": {
+        "button": { "width": 160, "height": 22 },
+        "dropdown": { "width": 160, "height": 90 },
+        "modes": [
+          "CROSSFADE",
+          "SPECTRAL",
+          "MORPH - SPECTRAL",
+          "MORPH - ZERO PHASE"
+        ]
+      }
+    },
+    "typography": {
+      "recommendedFonts": ["m5x7", "Cozette", "Silkscreen"],
+      "standardSizePt": 10,
+      "compactSizePt": 8
+    }
+  }
+}

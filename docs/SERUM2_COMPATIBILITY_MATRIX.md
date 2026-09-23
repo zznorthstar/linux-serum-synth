@@ -1,6 +1,6 @@
 # Serum 2 compatibility matrix for ZYG-ZXG
 
-Status: first implementation slice, 2026-09-21. This is a specification and gap ledger, **not a full compatibility claim**. A native C++ decoder and importer now create an independent patch model, a basic wavetable/envelope/low-pass renderer exists, and a VST3 bundle builds. Most Serum features are preserved in an opaque sidecar or typed shell but **do not yet affect audio**. See [machine-readable status](../compatibility/serum2_support.json).
+Status: partial instrument slice, updated 2026-09-22. This is a specification and gap ledger, **not a full compatibility claim**. A native C++ decoder and importer now create an independent patch model, a basic wavetable/envelope/low-pass renderer exists, and VST3 plus CLAP instruments build. Most Serum features are preserved in an opaque sidecar or typed shell but **do not yet affect audio**. See [machine-readable status](../compatibility/serum2_support.json).
 
 Sources: [official Serum 2 User Guide](https://www.xferrecords.com/manual/serum-2/docs) (manual for Serum 2.0.18, April 2025), [official What's New](https://static.xferrecords.com/Serum%202%20What's%20New.pdf), and aggregate inspection of 626 factory `.SerumPreset` files from the supplied 2.1.5 installer. These factory presets were authored as versions **2.0.11–2.0.15**; the installer version does not make them 2.1.5 feature fixtures. The factory corpus is a finite sample, so absence from it does not prove a feature absent from Serum 2. The machine-readable [corpus schema](SERUM2_CORPUS_SCHEMA.json) lists 515 distinct explicit `plainParams` paths, 799 structural paths, 49 observed modulation source IDs, 214 modulated destination type/parameter pairs, observed string enum values, 16 FX module names, and reference-field counts. The provided 2.1.2 user preset is a separate fixture.
 
@@ -8,24 +8,24 @@ Legend: **D** = documented by Xfer; **O** = observed in a decoded preset; **C** 
 
 | Subsystem | Required semantic state | Evidence | Current ZYG status |
 | --- | --- | --- | --- |
-| Main oscillators A/B/C | Independent enable, mode, pitch, level, pan, unison, key/velocity zones and routing | D/O | C; partial M/R for wavetable pitch/level/unison; pan/zones/warps not R |
-| Wavetable | Table identity/content, frame position/interpolation, phase/memory, two warp slots, unison | D/O | C/I; partial M/R for local mono RIFF WAVE frames; no bandlimiting or warps |
+| Main oscillators A/B/C | Independent enable, mode, pitch, level, pan, unison, key/velocity zones and routing | D/O | C; partial M/R/UI for enabled wavetable pitch, level, pan, initial/random phase, position, unison and detune; zones/warps not R |
+| Wavetable | Table identity/content, frame position/interpolation, phase/memory, two warp slots, unison | D/O | C/I; partial M/R/UI for local mono RIFF WAVE frames on A/B/C, including deterministic per-note random phase range; no bandlimiting, phase-memory modes or warps |
 | Sample | Source, regions/loop/slices, scan, pitch, warp, modulation | D/O | C; factory sample index I; M/R/UI absent |
 | Multisample | SFZ mapping, child samples, key/velocity layers, timbre, envelope | D/O | C; SFZ/sample index I; M/R/UI absent |
 | Granular | Sample timeline, grain density/length/window/randomization, warp | D/O | C; sample index I; M/R/UI absent |
 | Spectral | Source, frequency bounds, scan, spectral filter, phase/transients, spectral warps | D/O | C; sample index I; M/R/UI absent |
-| SUB / NOISE | Dedicated source parameters and independent routing | D/O | C; noise asset index I; M/R/UI absent |
-| Filters 1/2 | Exact type identity, cutoff/resonance/drive/var/wet/pan/level | D/O | C; partial M for both; R is only an initial single-pole low-pass fallback for Filter 1, not type compatible |
-| Mixer/routing | Seven routing slots, dual filter topology, Main/Direct/None, FX buses | D/O | C; partial M; first three source routes to Filter 1/Main/Direct/None only |
-| Modulation | Envelopes, LFO/path/chaos, macros, MIDI/MPE, audio-rate source modules | D/O | C; partial M of four envelopes/LFO raw state; only Env 1 is R |
-| Matrix | 64 ordered slots including source, target, curves, aux, slew, polarity, bypass | D/O | C; ordered routes partially M with source/destination/amount/bipolar/bypass; no R |
+| SUB / NOISE | Dedicated source parameters and independent routing | D/O | C/I; correct NOISE slot 3 / SUB slot 4 identity. Native SUB sine and NOISE white/sample-backed WAV/FLAC render with basic enable/level UI; Serum shape/pitch/color/one-shot semantics not R |
+| Filters 1/2 | Exact type identity, cutoff/resonance/drive/var/wet/pan/level | D/O | C; partial M for both; Filter 1 cutoff/resonance/drive/wet R/UI with a ZYG trapezoidal state-variable low-pass, not type compatible; Filter 2 not R |
+| Mixer/routing | Seven routing slots, dual filter topology, Main/Direct/None, FX buses | D/O | C; partial M; first three source routes to Filter 1/Main/Direct/None R/UI; remaining edges and FX buses not R |
+| Modulation | Envelopes, LFO/path/chaos, macros, MIDI/MPE, audio-rate source modules | D/O | C; Env 1 R/UI; native sine LFO 1 and Macro 1–8 R/UI for two supported destinations; imported LFO shapes preserved but not R |
+| Matrix | 64 ordered slots including source, target, curves, aux, slew, polarity, bypass | D/O | C; ordered routes partially M/UI; native sine LFO 1 and Macro 1–8 to OSC A WT position or Filter 1 cutoff R; imported routes with other semantics not R |
 | Voice/global | Poly/mono/legato/portamento/priority, tuning, MPE, oversampling, voice steps | D/O | C; mono/master volume/polyphony partially M; basic mono/voice allocation R; other state not R |
 | Arp | 12 clips, rate, patterns, probability/gate/retrigger/velocity/transpose | D/O | C; factory arp index I; M/R/UI absent |
 | Clip sequencer | 12 MIDI clips, notes, launch/playback, keyboard span, MIDI out | D/O | C; factory clip index I; M/R/UI absent |
-| FX rack | 13 effect classes, three splitters, ordered instances, Main/Bus 1/Bus 2 | D/O | C; IR index I; top-level rack/module identity partially M; no R |
+| FX rack | 13 effect classes, three splitters, ordered instances, Main/Bus 1/Bus 2 | D/O | C; IR index I; top-level rack/module identity partially M and shown on a read-only FX tab; no R |
 | Asset browser/resolver | Factory/user path, embedded data, missing/ambiguous diagnostics | D/O | Basic local exact-path I; broader import/embedded handling absent |
-| Native ZYG preset | Complete independent patch, ancestry, unknown Serum sidecar | Design requirement | v1 partial: `.zygpreset` JSON round-trips identity/oscillators/filters/routes/envelopes/voice-global (`src/Patch.cpp`, unit tested); modulation/FX/LFO/macro/arp/clip/ancestry sidecar not yet covered |
-| Native Linux VST3 / CLAP / host state | Audio/MIDI/automation/transport/reload | Design requirement | ZYG-ZXG VST3 discovered by REAPER; one 2.1.2 real-preset project saved, reopened and rendered non-silent audio offline at 48 kHz; **realtime transport playback verified** (non-zero live track/master peaks during actual playback, `docs/TESTING.md`); a first editable GUI slice exists (PRESET load/new/save, OSC A wavetable + table position) but has not been interactively verified inside REAPER by a human; automation/other sample rates not yet verified; CLAP absent |
+| Native ZYG preset | Complete independent patch, ancestry, unknown Serum sidecar | Design requirement | v2 JSON round-trips typed state, ordered matrix/FX identities, LFO/macro/clip raw state, diagnostics and original Serum bytes; asset references remain local paths; host state uses v2; GUI save/reopen not yet validated |
+| Native Linux VST3 / CLAP / host state | Audio/MIDI/automation/transport/reload | Design requirement | VST3 and CLAP built and individually discovered by REAPER; both produced nonzero track/master peaks during realtime transport with MIDI and monitoring. VST3 editor visually inspected. Edited host-state reload, automation and other sample rates not yet verified |
 
 ### Implemented parameter assumptions and open questions
 

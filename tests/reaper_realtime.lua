@@ -1,9 +1,9 @@
 -- Live REAPER transport/MIDI/VST3 meter check. This is intentionally not an
 -- offline render. Run against the developer's already-running REAPER
--- instance with `reaper -nonewinst tests/reaper_realtime.lua`. An
--- already-running REAPER does not inherit environment variables from a
--- later process invocation, so this always writes to a fixed /tmp report
--- path and never trusts ZYGZXG_REALTIME_REPORT from the invoking shell.
+-- instance with `reaper -newinst tests/reaper_realtime.lua`. Set
+-- ZYG_HOST_FORMAT=CLAP to test CLAP; VST3 is the default. Each format writes
+-- a separate report under /tmp. Use a separate instance so the user's open
+-- project is never modified.
 --
 -- Every step is wrapped so a failure still produces a diagnostic report
 -- instead of silently leaving a half-built disposable project tab open with
@@ -11,7 +11,8 @@
 -- content (unsaved + a ZYG-ZXG track) on the next run so leftovers from a
 -- crashed run get swept up without ever touching a tab it did not create.
 
-local report_path = "/tmp/zygzxg-realtime-session-report.txt"
+local plugin_format = os.getenv("ZYG_HOST_FORMAT") or "VST3"
+local report_path = "/tmp/zygzxg-realtime-" .. plugin_format .. "-report.txt"
 local log = {}
 local function step(msg)
   log[#log + 1] = string.format("[%.3f] %s", reaper.time_precise(), msg)
@@ -75,6 +76,7 @@ local function close_stale_disposable_tabs()
   return closed
 end
 
+local function run_test()
 local ok, err = pcall(function()
   step("script start")
   local closed = close_stale_disposable_tabs()
@@ -94,11 +96,11 @@ local ok, err = pcall(function()
   local master = reaper.GetMasterTrack(0)
   step("created track 0")
 
-  local fx = reaper.TrackFX_AddByName(track, "VST3: ZYG-ZXG", false, -1)
+  local fx = reaper.TrackFX_AddByName(track, plugin_format .. ": ZYG-ZXG", false, -1)
   step("TrackFX_AddByName returned " .. tostring(fx))
   if fx < 0 then
-    write_report("error=ZYG-ZXG VST3 unavailable via TrackFX_AddByName")
-    error("ZYG-ZXG VST3 unavailable")
+    write_report("error=ZYG-ZXG " .. plugin_format .. " unavailable via TrackFX_AddByName")
+    error("ZYG-ZXG " .. plugin_format .. " unavailable")
   end
   reaper.TrackFX_Show(track, fx, 0) -- 0 = hide floating/chain window
   step("hid FX chain window")
@@ -127,19 +129,22 @@ local ok, err = pcall(function()
   reaper.OnPlayButton()
   step("pressed play")
 
-  -- GetTrack(0,0)/GetMasterTrack(0) can transiently return nil on the very
-  -- first poll tick right after OnPlayButton() (observed directly, and
-  -- intermittently -- not on every run), presumably while REAPER's project
-  -- list is still settling from the track/FX/item just created. Re-fetch
-  -- every tick for freshness, but fall back to the pointers captured at
-  -- creation time (known valid then) rather than crash on a transient nil.
+  -- REAPER may briefly invalidate track pointers during project creation.
+  -- Re-fetch and validate them at each meter poll.
   local poll
   local function poll_body()
-    local live_track = reaper.GetTrack(0, 0) or track
-    local live_master = reaper.GetMasterTrack(0) or master
-    if not live_track or not live_master then
+    local live_track = reaper.GetTrack(0, 0)
+    local live_master = reaper.GetMasterTrack(0)
+    local track_ok = live_track and pcall(reaper.Track_GetPeakInfo, live_track, 0)
+    local master_ok = live_master and pcall(reaper.Track_GetPeakInfo, live_master, 0)
+    if not track_ok or not master_ok then
       step("poll tick skipped: track/master unavailable this frame")
-      if reaper.time_precise() - started < 3.0 then reaper.defer(poll) end
+      if reaper.time_precise() - started < 3.0 then reaper.defer(poll)
+      else
+        reaper.OnStopButton()
+        write_report("error=track/master pointer unavailable during live playback")
+        save_and_close_current_tab("unavailable")
+      end
       return
     end
     local playing = (reaper.GetPlayState() & 1) ~= 0
@@ -173,3 +178,13 @@ if not ok then
   step("SCRIPT ERROR: " .. tostring(err))
   write_report("error=" .. tostring(err))
 end
+end
+
+-- Command-line scripts may start before REAPER finishes restoring its first
+-- project. Delay track creation so pointers survive into deferred meter polls.
+local launch_time = reaper.time_precise()
+local function wait_for_host()
+  if reaper.time_precise() - launch_time < 5.0 then reaper.defer(wait_for_host)
+  else run_test() end
+end
+reaper.defer(wait_for_host)

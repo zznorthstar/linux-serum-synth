@@ -1,12 +1,20 @@
 # ZYG-ZXG
 
-ZYG-ZXG / Linux Serum Synth is an independent, GPL-3.0, Linux-native synthesizer being built to interpret Serum 2 presets with original DSP. It is **not affiliated with Xfer Records**. This is an **early engineering build**, not a production-compatible instrument. A native VST3, independent patch model, Serum importer and first wavetable audio path now have a REAPER offline-render smoke test; CLAP is not yet available. No release binary is available yet.
+ZYG-ZXG / Linux Serum Synth is an independent, GPL-3.0, Linux-native synthesizer being built to interpret Serum 2 presets with original DSP. It is **not affiliated with Xfer Records**. This is an **early engineering build**, not a production-compatible instrument. Native VST3i and CLAP instruments build and have separate REAPER realtime MIDI/transport tests. There is no public binary release yet.
 
-The supplied Serum 2.1.2 user preset decodes and its wavetable path renders in a REAPER project. Its modulation and FX do **not** yet render. The 626 supplied factory presets were authored in Serum 2.0.11–2.0.15; decoding them is not a claim that they play correctly. See [the support dashboard](compatibility/serum2_support.json) and [compatibility matrix](docs/SERUM2_COMPATIBILITY_MATRIX.md).
+The supplied Serum 2.1.2 user preset decodes and its wavetable path renders in a REAPER project. Its modulation and FX do **not** yet render. A second user preset authored in 2.0.24 has a detailed partial [verification report](docs/preset_verification/TSP_OVERVIEW_YAANO_Synth_stutter_candy.md). The 626 supplied factory presets were authored in Serum 2.0.11–2.0.15; decoding them is not a claim that they play correctly. See [the support dashboard](compatibility/serum2_support.json) and [compatibility matrix](docs/SERUM2_COMPATIBILITY_MATRIX.md).
 
 The first deliverables include a [factory-corpus schema](docs/SERUM2_CORPUS_SCHEMA.json), bounded `.SerumPreset` decoder, local-asset indexer, and native C++ vertical slice. Unknown fields are retained, not silently declared compatible. The indexer points at content the user obtained; it does not bundle or copy Xfer assets.
 
-## Build the experimental VST3
+## Install on Linux
+
+When an alpha release archive is available, extract it and copy the entire `ZYG-ZXG.vst3` bundle to `~/.vst3/` and `ZYG-ZXG.clap` to `~/.clap/`. Restart or rescan REAPER, insert **VST3i: ZYG-ZXG** or **CLAP: ZYG-ZXG** on an instrument track, arm it and enable monitoring. Play MIDI notes. The editor shows MIDI activity, active voices and output level; **Audition C3** can test the audio path while the track is processed. [Step-by-step install guide](docs/INSTALL_LINUX.md).
+
+Click **INIT** to start from a built-in sine, choose OSC A/B/C, browse a mono WAV wavetable, edit oscillator phase/random phase, SUB/NOISE, filter, envelope, macros and native sine LFO matrix routes, then **Save ZYG**. Use **Open ZYG** to reload a `.zygpreset`. For Serum import, click **Content** and choose a legally owned local Serum content root containing `Tables/` and `Samples/`, then **Load Serum**. The FX tab lists imported effect instances and labels them as DSP pending. No Xfer assets ship with the plugin. The editor uses the repository's `ui-design-kit/` logo, sprite controls, palette, and fixed 1000x600 layout.
+
+Tested preset containers: authored Serum **2.0.11–2.0.15** factory corpus (structural decode only), **2.0.24** and **2.1.2** supplied user presets (partial native mapping/render). Full semantic compatibility is unmeasured.
+
+## Build the experimental VST3 and CLAP
 
 On x86_64 Linux, install CMake 3.24+, Ninja, a C++20 compiler, ALSA/X11/FreeType/OpenGL development packages and `libzstd`. Configuration fetches pinned JUCE 8.0.9 and nlohmann/json 3.11.3 from upstream. No Xfer content is downloaded or bundled.
 
@@ -16,7 +24,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-The build output is `build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3`. Copy the **whole bundle directory** to `~/.vst3/` and rescan VST3 plugins in REAPER. The editor lets you select the root of your own legally obtained Serum content (`Tables`, `Samples`, etc.), load a `.SerumPreset`, start a new blank patch, and save/load a native `.zygpreset` (JSON; covers identity/oscillators/filters/routes/envelopes/voice-global only -- see `docs/PRESET_FORMAT.md`). OSC A exposes wavetable source (load any local mono WAVE file) and table position editing. The path and original preset bytes are saved in host state. Current wavetable support accepts a subset of local WAVE files; unsupported state is reported. Do not use this build in irreplaceable projects.
+The build outputs are `build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3` and `build/ZYGZXG_artefacts/Release/CLAP/ZYG-ZXG.clap`. `ZYG_BUILD_CLAP=OFF` skips the optional upstream CLAP extension. A GitHub Actions workflow builds, tests and packages both formats; it attaches artifacts only to explicitly published prereleases. No stable release is claimed.
 
 ## Research tools
 
@@ -32,6 +40,6 @@ python3 -m venv .venv
 
 If running without installing the script entry point, use `PYTHONPATH=. .venv/bin/python -m zygzxg.cli ...`. The content root should directly contain directories such as `Tables`, `Samples`, `Multisamples`, `Presets`, and `Impulses`. The index stores that root's absolute path and should stay private on the user's machine.
 
-The supplied 2.1.5 full installer was safely extracted with `7z` into the ignored `.local-serum-content/`; the updater has not been executed. Windows software is not a runtime dependency. The supplied `.fxp` is a legacy VST chunk preset and is not yet parsed.
+The supplied 2.1.5 full installer was safely extracted with `7z` into the ignored `.local-serum-content/`; the updater has not been executed. Windows software is not a runtime dependency. See the [local installation inventory](docs/SERUM2_INSTALLATION_INVENTORY.md). The supplied `.fxp` is a legacy VST chunk preset and is not yet parsed.
 
 See [HANDOFF.md](HANDOFF.md) for exact status, [AGENTS.md](AGENTS.md) for persistent engineering rules, [docs/TESTING.md](docs/TESTING.md) for verification, and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance.

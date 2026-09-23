@@ -7,11 +7,11 @@ namespace zyg {
 namespace {
 constexpr double tau = 6.2831853071795864769;
 double clamp(double v, double lo, double hi) { return std::min(hi, std::max(lo, v)); }
-float tableAt(const Oscillator& osc, double phase) noexcept {
+float tableAt(const Oscillator& osc, double phase, double position) noexcept {
     const auto size = osc.frameSize;
     const auto frames = osc.audio.size() / size;
     if (!frames || size < 2) return 0.0f;
-    const double scaled = clamp(osc.tablePosition / 256.0, 0.0, 1.0) * double(frames - 1);
+    const double scaled = clamp(position / 256.0, 0.0, 1.0) * double(frames - 1);
     const std::size_t frame = std::size_t(scaled);
     const double mix = scaled - double(frame);
     const double p = phase * size;
@@ -31,7 +31,11 @@ void SynthEngine::prepare(double sampleRate) noexcept {
 }
 void SynthEngine::setPatch(const Patch* patch) noexcept {
     patch_ = patch;
-    allNotesOff();
+}
+int SynthEngine::activeVoiceCount() const noexcept {
+    int count = 0;
+    for (const auto& voice : voices) count += voice.active;
+    return count;
 }
 void SynthEngine::allNotesOff() noexcept { for (auto& v : voices) v = Voice{}; }
 void SynthEngine::noteOn(int channel, int note, float velocity) noexcept {
@@ -51,11 +55,19 @@ void SynthEngine::noteOn(int channel, int note, float velocity) noexcept {
     target->note = note;
     target->velocity = std::clamp(velocity, 0.0f, 1.0f);
     target->age = ++clock_;
+    target->noiseState = 0x9e3779b9u ^ std::uint32_t(clock_ * 2654435761u) ^ std::uint32_t(note * 334214467u);
+    target->smoothedCutoff = clamp(patch_->filters[0].cutoff, 0.0, 1.0);
     for (std::size_t i = 0; i < patch_->oscillators.size(); ++i) {
         const auto& osc = patch_->oscillators[i];
         const int count = std::clamp(osc.unison, 1, 16);
-        for (int u = 0; u < count; ++u)
-            target->phase[i][u] = std::fmod(osc.initialPhase / 360.0 + double(u) / count, 1.0);
+        const double randomRange = clamp(osc.randomPhase / 100.0, 0.0, 1.0);
+        for (int u = 0; u < count; ++u) {
+            target->noiseState ^= target->noiseState << 13;
+            target->noiseState ^= target->noiseState >> 17;
+            target->noiseState ^= target->noiseState << 5;
+            const double randomOffset = double(target->noiseState) / 4294967296.0 * randomRange;
+            target->phase[i][u] = std::fmod(osc.initialPhase / 360.0 + double(u) / count + randomOffset, 1.0);
+        }
     }
 }
 void SynthEngine::noteOff(int channel, int note) noexcept {
@@ -94,8 +106,25 @@ double SynthEngine::envelope(Voice& voice) noexcept {
     }
     return voice.amp;
 }
-float SynthEngine::oscillatorSample(Voice& voice, int index, const Oscillator& osc) noexcept {
-    if (!osc.enabled || osc.audio.empty()) return 0.0f;
+float SynthEngine::oscillatorSample(Voice& voice, int index, const Oscillator& osc, double position) noexcept {
+    if (!osc.enabled) return 0.0f;
+    if (osc.mode == OscMode::noise) {
+        if (osc.audio.empty()) {
+            if (!osc.asset.empty() || !patch_->originalPreset.empty()) return 0.0f;
+            auto& state = voice.noiseState;
+            state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+            return (float(double(state) / 2147483648.0 - 1.0) * float(osc.volume));
+        }
+        const auto size = osc.audio.size();
+        const auto at = std::size_t(voice.noisePosition) % size;
+        const auto next = (at + 1) % size;
+        const double fraction = voice.noisePosition - std::floor(voice.noisePosition);
+        const float out = float(osc.audio[at] + fraction * (osc.audio[next] - osc.audio[at]));
+        voice.noisePosition += clamp(osc.sampleRate, 8000.0, 192000.0) / sampleRate_;
+        if (voice.noisePosition >= double(size)) voice.noisePosition -= double(size);
+        return out * float(osc.volume);
+    }
+    if (osc.mode != OscMode::sub && osc.audio.empty()) return 0.0f;
     const double semitone = 12.0 * osc.octave + osc.semitone + osc.fine / 100.0;
     const double base = 440.0 * std::exp2((voice.note - 69.0 + semitone) / 12.0);
     float result = 0.0f;
@@ -104,7 +133,7 @@ float SynthEngine::oscillatorSample(Voice& voice, int index, const Oscillator& o
         const double spread = count > 1 ? (2.0 * u / (count - 1) - 1.0) : 0.0;
         const double detuned = base * std::exp2(spread * osc.detune / 120.0);
         double& phase = voice.phase[index][u];
-        result += tableAt(osc, phase);
+        result += osc.mode == OscMode::sub ? float(std::sin(tau * phase)) : tableAt(osc, phase, position);
         phase += detuned / sampleRate_;
         phase -= std::floor(phase);
     }
@@ -113,30 +142,73 @@ float SynthEngine::oscillatorSample(Voice& voice, int index, const Oscillator& o
 void SynthEngine::render(float* left, float* right, int firstSample, int count) noexcept {
     if (!patch_) return;
     const auto& filter = patch_->filters[0];
-    const double cutoff = 20.0 * std::pow(1000.0, clamp(filter.cutoff, 0, 1));
-    const double coeff = 1.0 - std::exp(-tau * std::min(cutoff, sampleRate_ * 0.45) / sampleRate_);
+    const double cutoffSmooth = 1.0 - std::exp(-1.0 / (0.005 * sampleRate_));
+    const double q = 0.707 + 9.293 * clamp(filter.resonance / 100.0, 0.0, 1.0);
+    const double k = 1.0 / q;
+    const double driveGain = 1.0 + 0.05 * clamp(filter.drive, 0.0, 100.0);
+    const double driveNorm = filter.drive > 0.0 ? 1.0 / std::tanh(driveGain) : 1.0;
     const auto end = firstSample + count;
     for (int n = firstSample; n < end; ++n) {
         double l = 0, r = 0;
         for (auto& voice : voices) {
             if (!voice.active) continue;
             const double amp = envelope(voice) * voice.velocity;
-            double wet = 0, direct = 0;
-            for (int i = 0; i < 3; ++i) {
+            const double lfo = patch_->lfoOneSine ? std::sin(tau * voice.lfoPhase) : 0.0;
+            voice.lfoPhase += clamp(patch_->lfoOneRateHz, 0.01, 40.0) / sampleRate_;
+            voice.lfoPhase -= std::floor(voice.lfoPhase);
+            double tableOffset = 0.0, cutoffOffset = 0.0;
+            for (const auto& mod : patch_->modulation) {
+                if (mod.bypass || mod.auxiliary != 0) continue;
+                double value = 0.0;
+                if (mod.sourceKind == ModSource::lfo && mod.sourceIndex == 0 && patch_->lfoOneSine)
+                    value = mod.bipolar ? lfo : (lfo + 1.0) * 0.5;
+                else if (mod.sourceKind == ModSource::macro && mod.sourceIndex >= 0 && mod.sourceIndex < 8)
+                    value = patch_->macroValues[std::size_t(mod.sourceIndex)];
+                else continue;
+                if (mod.targetKind == ModTarget::wavetablePosition && mod.targetIndex == 0)
+                    tableOffset += mod.amount * 2.56 * value;
+                if (mod.targetKind == ModTarget::filterCutoff && mod.targetIndex == 0)
+                    cutoffOffset += mod.amount * 0.01 * value;
+            }
+            double wetL = 0, wetR = 0, directL = 0, directR = 0;
+            for (int i = 0; i < 5; ++i) {
                 const auto& osc = patch_->oscillators[i];
-                const auto sample = oscillatorSample(voice, i, osc);
+                const auto sample = oscillatorSample(voice, i, osc,
+                    osc.tablePosition + (i == 0 ? tableOffset : 0.0));
                 if (patch_->routes[i].target == RouteTarget::none) continue;
-                if (patch_->routes[i].target == RouteTarget::direct || patch_->routes[i].target == RouteTarget::main)
-                    direct += sample;
-                else wet += sample;
+                const double pan = clamp(osc.pan, -1.0, 1.0);
+                const double sl = sample * std::sqrt(1.0 - pan);
+                const double sr = sample * std::sqrt(1.0 + pan);
+                if (patch_->routes[i].target == RouteTarget::filter) { wetL += sl; wetR += sr; }
+                else { directL += sl; directR += sr; }
             }
             if (filter.enabled) {
-                voice.filterL += coeff * (wet - voice.filterL);
-                if (std::abs(voice.filterL) < 1e-20) voice.filterL = 0.0;
-                wet = voice.filterL;
+                const double targetCutoff = clamp(filter.cutoff + cutoffOffset, 0.0, 1.0);
+                voice.smoothedCutoff += cutoffSmooth * (targetCutoff - voice.smoothedCutoff);
+                const double cutoff = 20.0 * std::pow(1000.0, voice.smoothedCutoff);
+                const double g = std::tan(3.14159265358979323846 * std::min(cutoff, sampleRate_ * 0.45) / sampleRate_);
+                const double a1 = 1.0 / (1.0 + g * (g + k));
+                const double a2 = g * a1, a3 = g * a2;
+                auto lowpass = [&](double in, double& band, double& low) noexcept {
+                    if (filter.drive > 0.0) in = std::tanh(in * driveGain) * driveNorm;
+                    const double v3 = in - low;
+                    const double v1 = a1 * band + a2 * v3;
+                    const double v2 = low + a2 * band + a3 * v3;
+                    band = 2.0 * v1 - band;
+                    low = 2.0 * v2 - low;
+                    if (std::abs(band) < 1e-20) band = 0.0;
+                    if (std::abs(low) < 1e-20) low = 0.0;
+                    return v2;
+                };
+                const double filteredL = lowpass(wetL, voice.filterBandL, voice.filterLowL);
+                const double filteredR = lowpass(wetR, voice.filterBandR, voice.filterLowR);
+                const double mix = clamp(filter.wet / 100.0, 0.0, 1.0);
+                wetL += mix * (filteredL - wetL);
+                wetR += mix * (filteredR - wetR);
             }
-            const double signal = (wet + direct) * amp * patch_->masterVolume * 0.25;
-            l += signal; r += signal;
+            const double gain = amp * patch_->masterVolume * 0.25;
+            l += (wetL + directL) * gain;
+            r += (wetR + directR) * gain;
         }
         left[n] += float(l); right[n] += float(r);
     }

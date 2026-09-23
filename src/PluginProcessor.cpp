@@ -1,6 +1,82 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <cstdlib>
+#include <cmath>
+#include <algorithm>
+
+namespace {
+bool validAssetPath(const zyg::Patch& patch, const zyg::Oscillator& osc,
+                    const std::filesystem::path& path) {
+    if (patch.originalPreset.empty() || osc.userSelectedAsset) return true;
+    if (path.is_absolute()) return false;
+    for (const auto& part : path.lexically_normal()) if (part == "..") return false;
+    return true;
+}
+void prepareAudioAssets(zyg::Patch& patch) {
+    for (std::size_t oscIndex = 0; oscIndex < patch.oscillators.size(); ++oscIndex) {
+        auto& osc = patch.oscillators[oscIndex];
+        const auto oscPath = "Oscillator" + std::to_string(oscIndex);
+        if (!osc.enabled) continue;
+        if (osc.mode == zyg::OscMode::noise) {
+            if (osc.asset.empty()) continue; // native white noise generator
+            std::filesystem::path path(osc.asset);
+            if (!validAssetPath(patch, osc, path) || (path.is_relative() && patch.assetRoot.empty())) {
+                patch.diagnostics.push_back({"Oscillator3", "missing_asset", "unsafe or unset content path"});
+                continue;
+            }
+            if (path.is_relative()) path = std::filesystem::path(patch.assetRoot) /
+                "Samples/Factory Non-Tonal/Noises" / path;
+            const juce::File file(path.string());
+            if (!file.existsAsFile()) {
+                patch.diagnostics.push_back({"Oscillator3", "missing_asset", path.string()});
+                continue;
+            }
+            juce::AudioFormatManager formats;
+            formats.registerBasicFormats();
+            std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(file));
+            if (!reader || reader->lengthInSamples < 1 || reader->lengthInSamples > 8 * 1024 * 1024 ||
+                reader->sampleRate < 8000 || reader->sampleRate > 192000) {
+                patch.diagnostics.push_back({"Oscillator3", "unsupported_asset", path.string()});
+                continue;
+            }
+            const int frames = int(reader->lengthInSamples);
+            juce::AudioBuffer<float> buffer(2, frames);
+            if (!reader->read(&buffer, 0, frames, 0, true, true)) {
+                patch.diagnostics.push_back({"Oscillator3", "unsupported_asset", "decode failed: " + path.string()});
+                continue;
+            }
+            osc.audio.resize(std::size_t(frames));
+            const float* a = buffer.getReadPointer(0);
+            const float* b = buffer.getReadPointer(1);
+            for (int i = 0; i < frames; ++i)
+                osc.audio[std::size_t(i)] = reader->numChannels > 1 ? 0.5f * (a[i] + b[i]) : a[i];
+            osc.sampleRate = reader->sampleRate;
+            continue;
+        }
+        if (osc.mode != zyg::OscMode::wavetable) continue;
+        if (osc.asset.empty()) {
+            if (!patch.originalPreset.empty()) {
+                patch.diagnostics.push_back({oscPath, "missing_asset", "imported wavetable has no asset reference"});
+                continue;
+            }
+            osc.frameSize = 2048;
+            osc.audio.resize(2048);
+            for (int i = 0; i < 2048; ++i)
+                osc.audio[std::size_t(i)] = std::sin(juce::MathConstants<double>::twoPi * i / 2048.0);
+            continue;
+        }
+        std::filesystem::path path(osc.asset);
+        if (!validAssetPath(patch, osc, path) || (path.is_relative() && patch.assetRoot.empty())) {
+            patch.diagnostics.push_back({oscPath, "missing_asset", "unsafe or unset content path"});
+            continue;
+        }
+        if (path.is_relative()) path = std::filesystem::path(patch.assetRoot) / "Tables" / path;
+        std::string error;
+        if (!zyg::loadWavetableFromFile(osc, path, error))
+            patch.diagnostics.push_back({oscPath, "missing_asset", error + ": " + path.string()});
+    }
+}
+}
 
 ZygProcessor::ZygProcessor()
     : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
@@ -14,7 +90,7 @@ ZygProcessor::ZygProcessor()
     init->routes[0].target = zyg::RouteTarget::main;
     slots[0] = std::move(init);
     engine.setPatch(slots[0].get());
-    status = "ZYG init — select your Serum content directory, then load a .SerumPreset";
+    status = "INIT ready. Play MIDI or load a preset.";
     // Developer-only host smoke hook. Ordinary users never need environment
     // variables; this lets a deterministic REAPER project import a private
     // fixture without embedding or redistributing that preset in Git.
@@ -25,8 +101,8 @@ ZygProcessor::ZygProcessor()
     }
 }
 
-void ZygProcessor::prepareToPlay(double sampleRate, int) { engine.prepare(sampleRate); }
-void ZygProcessor::releaseResources() { engine.allNotesOff(); }
+void ZygProcessor::prepareToPlay(double sampleRate, int) { engine.prepare(sampleRate); auditionVoiceActive = false; }
+void ZygProcessor::releaseResources() { engine.allNotesOff(); auditionVoiceActive = false; }
 bool ZygProcessor::isBusesLayoutSupported(const BusesLayout& layout) const {
     return layout.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
 }
@@ -39,6 +115,9 @@ void ZygProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuff
         engine.setPatch(slots[requested].get());
         activeIndex.store(requested, std::memory_order_release);
     }
+    const bool audition = auditionHeld.load(std::memory_order_relaxed);
+    if (audition && !auditionVoiceActive) { engine.noteOn(16, 60, 0.8f); auditionVoiceActive = true; }
+    else if (!audition && auditionVoiceActive) { engine.noteOff(16, 60); auditionVoiceActive = false; }
     auto* left = buffer.getWritePointer(0);
     auto* right = buffer.getWritePointer(1);
     int cursor = 0;
@@ -47,11 +126,19 @@ void ZygProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuff
         engine.render(left, right, cursor, at - cursor);
         cursor = at;
         const auto message = metadata.getMessage();
-        if (message.isNoteOn()) engine.noteOn(message.getChannel(), message.getNoteNumber(), message.getFloatVelocity());
+        if (message.isNoteOn()) {
+            midiNotes.fetch_add(1, std::memory_order_relaxed);
+            engine.noteOn(message.getChannel(), message.getNoteNumber(), message.getFloatVelocity());
+        }
         else if (message.isNoteOff()) engine.noteOff(message.getChannel(), message.getNoteNumber());
         else if (message.isAllNotesOff() || message.isAllSoundOff()) engine.allNotesOff();
     }
     engine.render(left, right, cursor, buffer.getNumSamples() - cursor);
+    activeVoices.store(engine.activeVoiceCount(), std::memory_order_relaxed);
+    float peak = 0.0f;
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
+        peak = std::max(peak, std::max(std::abs(left[i]), std::abs(right[i])));
+    outputPeak.store(peak, std::memory_order_relaxed);
 }
 
 bool ZygProcessor::publish(zyg::Patch&& patch) {
@@ -93,6 +180,7 @@ bool ZygProcessor::loadPreset(const juce::File& file) {
     try {
         const auto root = getAssetRoot().toStdString();
         auto patch = zyg::loadSerumFile(file.getFullPathName().toStdString(), root);
+        prepareAudioAssets(patch);
         const auto summary = juce::String(zyg::statusSummary(patch));
         juce::MemoryBlock bytes(patch.originalPreset.data(), patch.originalPreset.size());
         if (!publish(std::move(patch))) { setStatus("Could not hand off patch to audio thread"); return false; }
@@ -110,6 +198,14 @@ bool ZygProcessor::loadPreset(const juce::File& file) {
 
 bool ZygProcessor::setAssetRoot(const juce::File& root) {
     if (!root.isDirectory()) { setStatus("Content directory does not exist"); return false; }
+    auto patch = currentPatchCopy();
+    patch.assetRoot = root.getFullPathName().toStdString();
+    std::erase_if(patch.diagnostics, [](const zyg::Diagnostic& d) {
+        return d.status == "missing_asset" &&
+            (d.path == "Oscillator0" || d.path == "Oscillator1" || d.path == "Oscillator2" || d.path == "Oscillator3");
+    });
+    prepareAudioAssets(patch);
+    if (!publish(std::move(patch))) { setStatus("Could not hand off content root to audio thread"); return false; }
     {
         const juce::ScopedLock lock(controlLock);
         assetRoot = root.getFullPathName();
@@ -122,6 +218,12 @@ zyg::Patch ZygProcessor::currentPatchCopy() const {
     const juce::ScopedLock lock(controlLock);
     const auto* current = slots[std::size_t(requestedIndex.load(std::memory_order_acquire))].get();
     return current ? *current : zyg::Patch{};
+}
+zyg::Patch ZygProcessor::getPatchSnapshot() const { return currentPatchCopy(); }
+bool ZygProcessor::editPatch(const std::function<void(zyg::Patch&)>& edit) {
+    auto patch = currentPatchCopy();
+    edit(patch);
+    return publish(std::move(patch));
 }
 
 juce::String ZygProcessor::getPresetName() const { return juce::String(currentPatchCopy().name); }
@@ -159,17 +261,15 @@ bool ZygProcessor::loadNativePreset(const juce::File& file) {
     try {
         const auto text = file.loadFileAsString().toStdString();
         auto patch = zyg::patchFromJson(zyg::Json::parse(text));
-        for (auto& osc : patch.oscillators) {
-            if (!osc.enabled || osc.mode != zyg::OscMode::wavetable || osc.asset.empty()) continue;
-            std::string error;
-            if (!zyg::loadWavetableFromFile(osc, osc.asset, error))
-                patch.diagnostics.push_back({"Oscillator", "missing_asset", error + ": " + osc.asset});
-        }
+        zyg::mapLegacySerumModulationRoutes(patch);
+        prepareAudioAssets(patch);
         const auto summary = juce::String(zyg::statusSummary(patch));
+        const auto loadedRoot = juce::String(patch.assetRoot);
         if (!publish(std::move(patch))) { setStatus("Could not hand off patch to audio thread"); return false; }
         {
             const juce::ScopedLock lock(controlLock);
             savedPreset = {};
+            assetRoot = loadedRoot;
             status = "Loaded " + file.getFileName() + " | " + summary;
         }
         return true;
@@ -191,32 +291,68 @@ void ZygProcessor::setOscATablePosition(double position) {
 }
 
 bool ZygProcessor::setOscAWavetableFile(const juce::File& file) {
+    return setOscWavetableFile(0, file);
+}
+
+bool ZygProcessor::setOscWavetableFile(int index, const juce::File& file) {
+    if (index < 0 || index > 2) return false;
     auto patch = currentPatchCopy();
-    auto& osc = patch.oscillators[0];
+    auto& osc = patch.oscillators[std::size_t(index)];
     std::string error;
     const auto path = file.getFullPathName().toStdString();
     if (!zyg::loadWavetableFromFile(osc, path, error)) { setStatus("Wavetable load failed: " + juce::String(error)); return false; }
     osc.enabled = true;
     osc.mode = zyg::OscMode::wavetable;
     osc.asset = path;
+    osc.userSelectedAsset = true;
     if (!publish(std::move(patch))) { setStatus("Could not hand off patch to audio thread"); return false; }
-    setStatus("OSC A wavetable: " + file.getFileName());
+    setStatus("OSC " + juce::String::charToString(juce::juce_wchar('A' + index)) + " wavetable: " + file.getFileName());
+    return true;
+}
+
+bool ZygProcessor::setNoiseSampleFile(const juce::File& file) {
+    auto patch = currentPatchCopy();
+    auto& noise = patch.oscillators[3];
+    noise.mode = zyg::OscMode::noise;
+    noise.asset = file.getFullPathName().toStdString();
+    noise.userSelectedAsset = true;
+    noise.enabled = true;
+    noise.audio.clear();
+    prepareAudioAssets(patch);
+    if (noise.audio.empty()) { setStatus("Noise sample could not be decoded"); return false; }
+    if (!publish(std::move(patch))) { setStatus("Could not hand off noise sample"); return false; }
+    setStatus("Noise sample: " + file.getFileName());
     return true;
 }
 
 void ZygProcessor::getStateInformation(juce::MemoryBlock& destination) {
     juce::MemoryOutputStream stream(destination, false);
-    const juce::ScopedLock lock(controlLock);
-    stream.writeString("ZYGZXG-state-1");
-    stream.writeString(assetRoot);
-    stream.writeInt(static_cast<int>(savedPreset.getSize()));
-    if (savedPreset.getSize()) stream.write(savedPreset.getData(), savedPreset.getSize());
+    stream.writeString("ZYGZXG-state-2");
+    const auto state = zyg::patchToJson(currentPatchCopy()).dump();
+    stream.writeString(juce::String::fromUTF8(state.data(), int(state.size())));
 }
 
 void ZygProcessor::setStateInformation(const void* data, int size) {
     if (!data || size <= 0) return;
     juce::MemoryInputStream stream(data, static_cast<std::size_t>(size), false);
-    if (stream.readString() != "ZYGZXG-state-1") { setStatus("Unknown plugin state format"); return; }
+    const auto version = stream.readString();
+    if (version == "ZYGZXG-state-2") {
+        try {
+            auto patch = zyg::patchFromJson(zyg::Json::parse(stream.readString().toStdString()));
+            zyg::mapLegacySerumModulationRoutes(patch);
+            prepareAudioAssets(patch);
+            const auto summary = juce::String(zyg::statusSummary(patch));
+            const auto restoredRoot = juce::String(patch.assetRoot);
+            if (publish(std::move(patch))) {
+                const juce::ScopedLock lock(controlLock);
+                assetRoot = restoredRoot;
+                status = "Restored: " + summary;
+            }
+            else setStatus("Restoration could not hand off patch");
+        } catch (const std::exception& error) { setStatus("Restore failed: " + juce::String(error.what())); }
+        return;
+    }
+    if (version != "ZYGZXG-state-1") { setStatus("Unknown plugin state format"); return; }
     const auto root = stream.readString();
     const int length = stream.readInt();
     if (length < 0 || length > 128 * 1024 * 1024 || stream.getNumBytesRemaining() < length) {

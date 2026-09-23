@@ -58,11 +58,138 @@ int main() {
         synth.render(left.data(), right.data(), 0, int(left.size()));
         const auto max = *std::max_element(left.begin(), left.end());
         if (!(max > 0.001f && max < 1.0f)) throw std::runtime_error("init oscillator silent or unstable");
+        auto renderAttack = [&](zyg::Patch& patch) {
+            std::vector<float> out(256), scratch(256);
+            synth.setPatch(&patch); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+            synth.render(out.data(), scratch.data(), 0, int(out.size()));
+            return out;
+        };
+        auto fixedA = renderAttack(init), fixedB = renderAttack(init);
+        if (fixedA != fixedB) throw std::runtime_error("zero random phase did not retrigger deterministically");
+        auto randomized = init;
+        randomized.oscillators[0].randomPhase = 100.0;
+        auto randomA = renderAttack(randomized), randomB = renderAttack(randomized);
+        double phaseDifference = 0.0;
+        for (std::size_t i = 0; i < randomA.size(); ++i)
+            phaseDifference += std::abs(randomA[i] - randomB[i]);
+        if (phaseDifference < 0.01) throw std::runtime_error("random phase had no rendered effect");
+        // A UI patch handoff must not silence a held note. The filter edit
+        // must change the waveform while the voice continues to render.
+        auto edited = init;
+        edited.routes[0].target = zyg::RouteTarget::filter;
+        edited.filters[0].enabled = true;
+        edited.filters[0].cutoff = 0.05;
+        synth.setPatch(&edited);
+        std::fill(left.begin(), left.end(), 0);
+        std::fill(right.begin(), right.end(), 0);
+        synth.render(left.data(), right.data(), 0, 1024);
+        const float heldPeak = *std::max_element(left.begin(), left.begin() + 1024);
+        if (!(heldPeak > 1e-5f && std::isfinite(heldPeak)))
+            throw std::runtime_error("live filter edit silenced the held note or became unstable");
+        auto filterPatch = init;
+        filterPatch.routes[0].target = zyg::RouteTarget::filter;
+        filterPatch.filters[0].enabled = true;
+        filterPatch.filters[0].cutoff = 0.37;
+        auto filterEnergy = [&](zyg::Patch& p) {
+            synth.setPatch(&p); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+            std::fill(left.begin(), left.end(), 0);
+            synth.render(left.data(), right.data(), 0, 4096);
+            double energy = 0;
+            for (int i = 1024; i < 4096; ++i) {
+                if (!std::isfinite(left[std::size_t(i)]) || std::abs(left[std::size_t(i)]) > 10)
+                    throw std::runtime_error("resonant filter produced unstable output");
+                energy += left[std::size_t(i)] * left[std::size_t(i)];
+            }
+            return energy;
+        };
+        const auto plainEnergy = filterEnergy(filterPatch);
+        filterPatch.filters[0].resonance = 80;
+        const auto resonantEnergy = filterEnergy(filterPatch);
+        filterPatch.filters[0].resonance = 0;
+        filterPatch.filters[0].drive = 80;
+        const auto drivenEnergy = filterEnergy(filterPatch);
+        if (std::abs(resonantEnergy - plainEnergy) < plainEnergy * 0.05 ||
+            std::abs(drivenEnergy - plainEnergy) < plainEnergy * 0.05)
+            throw std::runtime_error("filter resonance or drive had no audible DSP effect");
         synth.noteOff(1, 60);
         std::fill(left.begin(), left.end(), 0);
         std::fill(right.begin(), right.end(), 0);
         synth.render(left.data(), right.data(), 0, int(left.size()));
         if (std::abs(left.back()) > 1e-5f) throw std::runtime_error("release did not complete");
+
+        // A native LFO 1 matrix route must alter the rendered table position.
+        zyg::Patch moving = init;
+        moving.oscillators[0].audio.resize(4096);
+        std::fill(moving.oscillators[0].audio.begin() + 2048, moving.oscillators[0].audio.end(), 0.0f);
+        moving.lfoOneRateHz = 2.0;
+        zyg::ModulationRoute route;
+        route.source = 6; route.destinationModule = "WTOsc";
+        route.destinationParameter = "kParamTablePos"; route.amount = 100.0;
+        route.sourceKind = zyg::ModSource::lfo; route.sourceIndex = 0;
+        route.targetKind = zyg::ModTarget::wavetablePosition; route.targetIndex = 0;
+        moving.modulation.push_back(route);
+        auto reference = moving;
+        reference.modulation.clear();
+        synth.setPatch(&reference); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, int(left.size()));
+        double referenceEnergy = 0;
+        for (float sample : left) referenceEnergy += sample * sample;
+        synth.setPatch(&moving); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, int(left.size()));
+        double movingEnergy = 0;
+        for (float sample : left) movingEnergy += sample * sample;
+        if (!(movingEnergy < referenceEnergy * 0.8 && movingEnergy > referenceEnergy * 0.01))
+            throw std::runtime_error("LFO 1 to WT position route did not affect audio");
+        moving.modulation[0].source = 999;
+        moving.modulation[0].destinationModule = "unrecognized import label";
+        moving.modulation[0].destinationParameter = "unrecognized parameter";
+        synth.setPatch(&moving); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, int(left.size()));
+        double typedEnergy = 0;
+        for(float sample:left) typedEnergy += sample*sample;
+        if(std::abs(typedEnergy-movingEnergy)>movingEnergy*1e-6)
+            throw std::runtime_error("DSP route still depends on raw Serum identifiers");
+        moving.modulation[0].source = 25;
+        moving.modulation[0].sourceKind = zyg::ModSource::macro;
+        moving.modulation[0].sourceIndex = 0;
+        moving.macroValues[0] = 1.0;
+        synth.setPatch(&moving); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, int(left.size()));
+        double macroEnergy = 0;
+        for(float sample:left) macroEnergy += sample*sample;
+        if(!(macroEnergy < referenceEnergy*0.01))
+            throw std::runtime_error("Macro 1 to WT position route did not affect audio");
+
+        zyg::Patch subPatch;
+        subPatch.oscillators[4].enabled = true;
+        subPatch.oscillators[4].mode = zyg::OscMode::sub;
+        subPatch.oscillators[4].volume = 0.6;
+        subPatch.routes[4].target = zyg::RouteTarget::main;
+        synth.setPatch(&subPatch); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, 2048);
+        if (*std::max_element(left.begin(), left.begin() + 2048) < 0.01f)
+            throw std::runtime_error("native SUB source is silent");
+
+        zyg::Patch noisePatch;
+        noisePatch.oscillators[3].enabled = true;
+        noisePatch.oscillators[3].mode = zyg::OscMode::noise;
+        noisePatch.routes[3].target = zyg::RouteTarget::main;
+        synth.setPatch(&noisePatch); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, 2048);
+        if (*std::max_element(left.begin(), left.begin() + 2048) < 0.01f)
+            throw std::runtime_error("native NOISE source is silent");
+        noisePatch.originalPreset = {1}; // imported missing assets must not turn into white noise
+        synth.setPatch(&noisePatch); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
+        std::fill(left.begin(), left.end(), 0);
+        synth.render(left.data(), right.data(), 0, 2048);
+        if (*std::max_element(left.begin(), left.begin() + 2048) > 1e-7f)
+            throw std::runtime_error("missing imported NOISE asset generated unrelated white noise");
 
         const char* fixture = std::getenv("ZYG_TEST_PRESET");
         const char* assets = std::getenv("ZYG_TEST_ASSET_ROOT");
@@ -106,8 +233,38 @@ int main() {
             original.routes[0].target = zyg::RouteTarget::direct;
             original.envelopes[0].attack = 0.02;
             original.envelopes[0].sustain = 0.8;
+            original.lfoOneRateHz = 2.5;
+            original.macroValues[0] = 0.75;
+            original.modulation.push_back({});
+            original.modulation[0].source = 6;
+            original.modulation[0].sourceKind = zyg::ModSource::lfo;
+            original.modulation[0].destinationModule = "WTOsc";
+            original.modulation[0].destinationParameter = "kParamTablePos";
+            original.modulation[0].targetKind = zyg::ModTarget::wavetablePosition;
+            original.modulation[0].amount = 45;
+            original.fx.push_back({"FXDelay", 0, 0, true, zyg::Json{{"wet", 20}}, {}});
+            original.unknownSerumState = zyg::Json{{"unknown", zyg::Json{{"exact", 123}}}};
+            original.originalPreset = {0, 1, 255};
+            original.diagnostics.push_back({"FXRack0", "not_rendered", "effect retained"});
             const auto json = zyg::patchToJson(original);
             const auto restored = zyg::patchFromJson(json);
+            if (restored.modulation.size() != 1 || restored.modulation[0].amount != 45 ||
+                restored.modulation[0].sourceKind != zyg::ModSource::lfo ||
+                restored.modulation[0].targetKind != zyg::ModTarget::wavetablePosition ||
+                restored.fx.size() != 1 || restored.lfoOneRateHz != 2.5 || restored.macroValues[0] != 0.75 ||
+                restored.unknownSerumState != original.unknownSerumState ||
+                restored.originalPreset != original.originalPreset || restored.diagnostics.size() != 1)
+                throw std::runtime_error(".zygpreset round trip lost modulation, FX or Serum provenance");
+            auto legacyJson = json;
+            legacyJson["modulation"][0].erase("sourceKind");
+            legacyJson["modulation"][0].erase("sourceIndex");
+            legacyJson["modulation"][0].erase("targetKind");
+            legacyJson["modulation"][0].erase("targetIndex");
+            auto legacy = zyg::patchFromJson(legacyJson);
+            zyg::mapLegacySerumModulationRoutes(legacy);
+            if (legacy.modulation[0].sourceKind != zyg::ModSource::lfo ||
+                legacy.modulation[0].targetKind != zyg::ModTarget::wavetablePosition)
+                throw std::runtime_error("experimental v2 route did not migrate to native typed modulation");
             if (restored.name != original.name || restored.author != original.author)
                 throw std::runtime_error(".zygpreset round trip lost identity fields");
             if (std::abs(restored.masterVolume - original.masterVolume) > 1e-9 || restored.mono != original.mono
@@ -124,10 +281,6 @@ int main() {
                 throw std::runtime_error(".zygpreset round trip lost route target");
             if (std::abs(restored.envelopes[0].attack - original.envelopes[0].attack) > 1e-9)
                 throw std::runtime_error(".zygpreset round trip lost envelope fields");
-            // Fields this v1 format deliberately does not cover yet must stay
-            // at their defaults, not silently fabricated.
-            if (!restored.modulation.empty() || !restored.fx.empty())
-                throw std::runtime_error(".zygpreset unexpectedly fabricated unsupported state");
         }
         {
             const auto path = writeSyntheticWav(2048);

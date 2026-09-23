@@ -1,0 +1,55 @@
+name: Linux plugin build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  linux-x86_64:
+    if: github.event_name != 'release' || github.event.release.prerelease
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build g++ cmake git libzstd-dev libasound2-dev \
+            libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev \
+            libfreetype6-dev libfontconfig1-dev libgl1-mesa-dev
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DZYG_BUILD_CLAP=ON
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Package Linux instruments
+        run: |
+          mkdir -p dist/ZYG-ZXG-linux-x86_64
+          cp -a build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3 dist/ZYG-ZXG-linux-x86_64/
+          cp -a build/ZYGZXG_artefacts/Release/CLAP/ZYG-ZXG.clap dist/ZYG-ZXG-linux-x86_64/
+          cp docs/INSTALL_LINUX.md dist/ZYG-ZXG-linux-x86_64/INSTALL.md
+          cp LICENSE dist/ZYG-ZXG-linux-x86_64/LICENSE.txt
+          cp docs/THIRD_PARTY.md dist/ZYG-ZXG-linux-x86_64/THIRD_PARTY.md
+          mkdir -p dist/ZYG-ZXG-linux-x86_64/licenses
+          cp build/_deps/juce-src/LICENSE.md dist/ZYG-ZXG-linux-x86_64/licenses/JUCE.md
+          cp build/_deps/json-src/LICENSE.MIT dist/ZYG-ZXG-linux-x86_64/licenses/nlohmann-json.txt
+          cp build/_deps/clap_juce_extensions-src/LICENSE.md dist/ZYG-ZXG-linux-x86_64/licenses/clap-juce-extensions.md
+          cp build/_deps/clap_juce_extensions-src/clap-libs/clap/LICENSE dist/ZYG-ZXG-linux-x86_64/licenses/CLAP.txt
+          cp build/_deps/clap_juce_extensions-src/clap-libs/clap-helpers/LICENSE dist/ZYG-ZXG-linux-x86_64/licenses/clap-helpers.txt
+          tar -czf dist/ZYG-ZXG-linux-x86_64.tar.gz -C dist ZYG-ZXG-linux-x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZYG-ZXG-linux-x86_64
+          path: dist/ZYG-ZXG-linux-x86_64.tar.gz
+      - name: Attach to alpha release
+        if: github.event_name == 'release' && github.event.release.prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/ZYG-ZXG-linux-x86_64.tar.gz --clobber

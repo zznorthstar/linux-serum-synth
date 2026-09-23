@@ -12,6 +12,14 @@ FetchContent_Declare(juce GIT_REPOSITORY https://github.com/juce-framework/JUCE.
 FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json.git GIT_TAG v3.11.3 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(juce json)
 
+option(ZYG_BUILD_CLAP "Build the Linux CLAP instrument" ON)
+if(ZYG_BUILD_CLAP)
+    FetchContent_Declare(clap_juce_extensions
+        GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
+        GIT_TAG 55525c9858d4b25687be7759a5e0f70eccef218e)
+    FetchContent_MakeAvailable(clap_juce_extensions)
+endif()
+
 find_library(ZSTD_LIBRARY NAMES zstd REQUIRED)
 
 add_library(zygzxg_core STATIC
@@ -35,10 +43,20 @@ juce_add_plugin(ZYGZXG
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD FALSE)
+juce_add_binary_data(ZYGZXGUIAssets SOURCES
+    "ui-design-kit/the logo.png"
+    ui-design-kit/knob_32x32_128frames.png
+    ui-design-kit/knob_48x48_128frames.png
+    ui-design-kit/knob_64x64_128frames.png)
 target_sources(ZYGZXG PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp)
-target_link_libraries(ZYGZXG PRIVATE zygzxg_core juce::juce_audio_utils juce::juce_dsp)
+target_link_libraries(ZYGZXG PRIVATE ZYGZXGUIAssets zygzxg_core juce::juce_audio_utils juce::juce_dsp)
 target_compile_definitions(ZYGZXG PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 juce_generate_juce_header(ZYGZXG)
+if(ZYG_BUILD_CLAP)
+    clap_juce_extensions_plugin(TARGET ZYGZXG
+        CLAP_ID "org.zygzxg.linuxserumsynth"
+        CLAP_FEATURES instrument synthesizer)
+endif()
 
 enable_testing()
 add_executable(zygzxg_core_tests tests/core_tests.cpp)

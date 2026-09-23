@@ -80,17 +80,20 @@ void unmappedDiagnostics(Patch& patch, const Json& node, const std::string& path
     }
 }
 bool firstSliceRenders(const std::string& path) {
-    if (path == "Global0.kParamMasterVolume" || path == "Global0.kParamMono" || path == "Global0.kParamPoly")
+    if (path == "Global0.kParamMasterVolume" || path == "Global0.kParamMonoToggle" ||
+        path == "Global0.kParamMono" || path == "Global0.kParamPoly")
         return true;
     if (path.starts_with("Env0."))
         return path == "Env0.kParamAttack" || path == "Env0.kParamHold" || path == "Env0.kParamDecay" ||
                path == "Env0.kParamSustain" || path == "Env0.kParamRelease";
-    if (path == "VoiceFilter0.kParamEnable" || path == "VoiceFilter0.kParamFreq") return true;
+    if (path == "VoiceFilter0.kParamEnable" || path == "VoiceFilter0.kParamFreq" ||
+        path == "VoiceFilter0.kParamReso" || path == "VoiceFilter0.kParamDrive" ||
+        path == "VoiceFilter0.kParamWet") return true;
     for (int i = 0; i < 3; ++i) {
         const auto osc = "Oscillator" + std::to_string(i) + ".";
         if (path == osc + "kParamEnable" || path == osc + "kParamType" ||
             path == osc + "kParamOctave" || path == osc + "kParamCoarse" ||
-            path == osc + "kParamFine" || path == osc + "kParamVolume" ||
+            path == osc + "kParamFine" || path == osc + "kParamVolume" || path == osc + "kParamPan" ||
             path == osc + "kParamUnison" || path == osc + "kParamDetune" ||
             path == osc + "WTOsc" + std::to_string(i) + ".kParamTablePos" ||
             path == osc + "WTOsc" + std::to_string(i) + ".kParamInitialPhase" ||
@@ -117,6 +120,8 @@ std::string sourcePath(const Json& mode, OscMode type) {
     switch (type) {
         case OscMode::wavetable: return string(mode, "relativePathToWT");
         case OscMode::multisample: return string(mode, "sfzPathRelative");
+        case OscMode::noise: return string(mode, "relativePathToNoiseSample");
+        case OscMode::sub: return {};
         default: return string(mode, "samplePathRelative");
     }
 }
@@ -124,7 +129,7 @@ std::string assetCategory(OscMode type) {
     switch (type) {
         case OscMode::wavetable: return "Tables";
         case OscMode::multisample: return "Multisamples";
-        case OscMode::noise: return "Noises";
+        case OscMode::noise: return "Samples/Factory Non-Tonal/Noises";
         default: return "Samples";
     }
 }
@@ -241,6 +246,27 @@ Patch loadSerumFile(const std::filesystem::path& file, const std::filesystem::pa
     return importSerum(decodeSerum(bytes), assetRoot, file.string());
 }
 
+void mapLegacySerumModulationRoutes(Patch& patch) {
+    for (auto& route : patch.modulation) {
+        if (route.sourceKind == ModSource::unknown) {
+            if (route.source >= 6 && route.source <= 15) {
+                route.sourceKind = ModSource::lfo; route.sourceIndex = route.source - 6;
+            } else if (route.source >= 25 && route.source <= 32) {
+                route.sourceKind = ModSource::macro; route.sourceIndex = route.source - 25;
+            }
+        }
+        if (route.targetKind == ModTarget::unknown) {
+            if (route.destinationModule == "WTOsc" && route.destinationParameter == "kParamTablePos") {
+                route.targetKind = ModTarget::wavetablePosition;
+                route.targetIndex = route.destinationInstance;
+            } else if (route.destinationModule == "VoiceFilter" && route.destinationParameter == "kParamFreq") {
+                route.targetKind = ModTarget::filterCutoff;
+                route.targetIndex = route.destinationInstance;
+            }
+        }
+    }
+}
+
 Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, const std::string& file) {
     Patch patch;
     patch.name = string(doc.metadata, "presetName", "Unnamed Serum preset");
@@ -255,9 +281,9 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
     patch.global = global;
     const Json& gp = params(global);
     patch.masterVolume = number(gp, "kParamMasterVolume", 0.7);
-    patch.mono = active(gp, "kParamMono", false);
+    patch.mono = active(gp, "kParamMonoToggle", active(gp, "kParamMono", false));
     patch.polyphony = std::clamp(int(number(gp, "kParamPoly", 16)), 1, 64);
-    countMapped(patch, gp, "Global0", {"kParamMasterVolume", "kParamMono", "kParamPoly"});
+    countMapped(patch, gp, "Global0", {"kParamMasterVolume", "kParamMonoToggle", "kParamMono", "kParamPoly"});
 
     for (int i = 0; i < 5; ++i) {
         auto& osc = patch.oscillators[i];
@@ -265,8 +291,8 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         const Json& o = obj(doc.state, key), &p = params(o);
         osc.additional = o;
         osc.enabled = active(p, "kParamEnable", i == 0);
-        osc.modeId = string(p, "kParamType", i == 3 ? "kOsc_Sub" : i == 4 ? "kOsc_Noise" : "kOsc_Wavetable");
-        osc.mode = i == 3 ? OscMode::sub : i == 4 ? OscMode::noise : oscillatorMode(osc.modeId);
+        osc.modeId = string(p, "kParamType", i == 3 ? "kOsc_Noise" : i == 4 ? "kOsc_Sub" : "kOsc_Wavetable");
+        osc.mode = i == 3 ? OscMode::noise : i == 4 ? OscMode::sub : oscillatorMode(osc.modeId);
         osc.octave = int(number(p, "kParamOctave", 0));
         osc.semitone = int(number(p, "kParamCoarse", 0));
         osc.fine = number(p, "kParamFine", 0.0);
@@ -278,7 +304,8 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
                                "kParamFine", "kParamVolume", "kParamPan", "kParamUnison", "kParamDetune"});
         const std::string modeKey = (osc.mode == OscMode::wavetable ? "WTOsc" :
             osc.mode == OscMode::sample ? "SampleOsc" : osc.mode == OscMode::multisample ? "MultiSampleOsc" :
-            osc.mode == OscMode::granular ? "GranularOsc" : "SpectralOsc") + std::to_string(i);
+            osc.mode == OscMode::granular ? "GranularOsc" : osc.mode == OscMode::noise ? "NoiseOsc" :
+            osc.mode == OscMode::sub ? "SubOsc" : "SpectralOsc") + std::to_string(i);
         const Json& mode = obj(o, modeKey), &mp = params(mode);
         osc.modeState = mode;
         osc.asset = sourcePath(mode, osc.mode);
@@ -296,6 +323,8 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
             const auto path = safeAssetPath(root, assetCategory(osc.mode), osc.asset);
             if (!osc.asset.empty() && !std::filesystem::is_regular_file(path))
                 diagnostic(patch, key, "missing_asset", osc.asset);
+            if (osc.asset.empty() && osc.mode != OscMode::sub)
+                diagnostic(patch, key, "missing_asset", "no audio asset reference");
             diagnostic(patch, key, "not_rendered", "oscillator mode " + osc.modeId);
         }
     }
@@ -347,10 +376,22 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         route.source = m["source"][0].is_number_integer() ? m["source"][0].get<int>() : 0;
         route.auxiliary = m["source"].size() > 1 && m["source"][1].is_number_integer() ? m["source"][1].get<int>() : 0;
         route.sourceName = sourceName(route.source);
+        if (route.source >= 6 && route.source <= 15) {
+            route.sourceKind = ModSource::lfo; route.sourceIndex = route.source - 6;
+        } else if (route.source >= 25 && route.source <= 32) {
+            route.sourceKind = ModSource::macro; route.sourceIndex = route.source - 25;
+        }
         route.destinationModule = string(m, "destModuleTypeString");
         route.destinationParameter = string(m, "destModuleParamName");
         route.destinationInstance = int(number(m, "destModuleID", 0));
         route.destinationParameterId = int(number(m, "destModuleParamID", -1));
+        if (route.destinationModule == "WTOsc" && route.destinationParameter == "kParamTablePos") {
+            route.targetKind = ModTarget::wavetablePosition;
+            route.targetIndex = route.destinationInstance;
+        } else if (route.destinationModule == "VoiceFilter" && route.destinationParameter == "kParamFreq") {
+            route.targetKind = ModTarget::filterCutoff;
+            route.targetIndex = route.destinationInstance;
+        }
         const Json& p = params(m);
         route.amount = number(p, "kParamAmount", 0.0);
         route.bipolar = active(p, "kParamBipolar", false);
@@ -364,7 +405,14 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         patch.lfos[i] = obj(doc.state, "LFO" + std::to_string(i));
         if (!params(patch.lfos[i]).empty()) diagnostic(patch, "LFO" + std::to_string(i), "not_rendered", "LFO retained");
     }
-    for (int i = 0; i < 8; ++i) patch.macros[i] = obj(doc.state, "Macro" + std::to_string(i));
+    patch.lfoOneSine = false;
+    for (int i = 0; i < 8; ++i) {
+        const auto key = "Macro" + std::to_string(i);
+        patch.macros[i] = obj(doc.state, key);
+        const auto& mp = params(patch.macros[i]);
+        patch.macroValues[i] = std::clamp(number(mp, "kParamValue", 0.0) / 100.0, 0.0, 1.0);
+        countMapped(patch, mp, key, {"kParamValue"});
+    }
     for (int rack = 0; rack < 3; ++rack) {
         const Json& r = obj(doc.state, "FXRack" + std::to_string(rack));
         const Json& fx = r.contains("FX") ? r["FX"] : Json();

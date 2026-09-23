@@ -9,3 +9,4 @@
 - [nlohmann/json 3.11.3](https://github.com/nlohmann/json): MIT-licensed JSON/CBOR parsing dependency, pinned via CMake; no source copied into Git.
 - [Zstandard/libzstd](https://github.com/facebook/zstd): BSD-licensed system library for Serum container decompression; linked at build/runtime, not bundled.
 - The supplied Xfer installer, updater, presets, screenshot and extracted factory content are private reference material. They are excluded from Git and must not be redistributed with ZYG-ZXG.
+- [clap-juce-extensions](https://github.com/free-audio/clap-juce-extensions), pinned to `55525c9858d4b25687be7759a5e0f70eccef218e`: MIT licensed, fetched with its CLAP submodules by CMake to build the CLAP wrapper. No extension source is copied into Git; its licenses must accompany distributed binaries as applicable.

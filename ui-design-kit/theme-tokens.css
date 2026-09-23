@@ -1,0 +1,63 @@
+:root {
+  /* ==========================================================================
+     CANVAS & VOID (Base Surfaces)
+     ========================================================================== */
+  --color-bg-void:           #08060D; /* Pitch black with cold violet undertone */
+  --color-bg-chassis:        #100B1B; /* Main plugin frame & background */
+  --color-surface-panel:     #181126; /* Module panels (OSC, Filter, Envelopes) */
+  --color-surface-raised:    #231838; /* Buttons, fader trenches, sub-modules */
+  --color-surface-sunken:    #0C0914; /* Wavetable display wells, LCD recesses */
+
+  /* ==========================================================================
+     CHUNKY PIXEL BORDERS & BEVELS (1px hard edges)
+     ========================================================================== */
+  --color-border-dark:       #0A0710; /* Shadow bevel (bottom/right edges) */
+  --color-border-medium:     #31224D; /* Inactive separator line */
+  --color-border-light:      #4D3678; /* Highlight bevel (top/left 1px rim) */
+
+  /* ==========================================================================
+     PRIMARY INTERACTIVE: ACID GREEN (Active states, modulation, envelopes)
+     ========================================================================== */
+  --color-acid-glow:         #D6FF85; /* Specular highlight / hot center pip */
+  --color-acid-base:         #39FF14; /* Core radioactive green (leads, active lines) */
+  --color-acid-dim:          #24A812; /* Unfocused active lines / inactive mod arcs */
+  --color-acid-shadow:       #0F380A; /* Dithered glow falloff & shaded tracks */
+
+  /* ==========================================================================
+     SECONDARY INTERACTIVE: EVIL PURPLE (Selection, accenting, routing)
+     ========================================================================== */
+  --color-purple-hot:        #D84CFF; /* Bright neon violet (focus ring, secondary active) */
+  --color-purple-base:       #8A1FDF; /* Saturated evil purple (selected tabs/buttons) */
+  --color-purple-dim:        #57148C; /* Unselected toggle fill */
+  --color-purple-shadow:     #2B0A45; /* Dark purple shade for depressed buttons */
+
+  /* ==========================================================================
+     TEXT & DIGITAL DATA (Optimized for pixel font legibility)
+     ========================================================================== */
+  --color-text-high-contrast:#F0FFF2; /* High-visibility pale mint off-white */
+  --color-text-normal:       #A6B4A8; /* Standard parameter labels */
+  --color-text-dim:          #59635A; /* Disabled options, secondary tick marks */
+  --color-text-acid-glow:    #63FF46; /* LCD readouts (Hz, dB, ms, octave numbers) */
+
+  /* ==========================================================================
+     MODULATION DEPTH & WARNING ACCENTS
+     ========================================================================== */
+  --color-crimson-bright:    #FF2A55; /* Inverted mod depth, clipping alert, solo */
+  --color-crimson-dim:       #8A112A; /* Inactive unipolar mod line */
+  --color-amber-bright:      #FF9900; /* Aux modulation destination, warp indicators */
+  --color-amber-dim:         #7A4900; /* Filter drive / saturation threshold */
+
+  /* ==========================================================================
+     COMPONENT SIZING METRICS (1000x600 layout)
+     ========================================================================== */
+  --canvas-width:            1000px;
+  --canvas-height:           600px;
+  --knob-size-small:         32px;
+  --knob-size-medium:        48px;
+  --knob-size-large:         64px;
+  --fader-track-width:       8px;
+  --button-height-standard:  24px;
+  --button-icon-size:        16px;
+  --font-size-standard:      10px;
+  --font-size-small:         8px;
+}
