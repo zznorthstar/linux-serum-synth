@@ -8,8 +8,8 @@ Legend: **D** = documented by Xfer; **O** = observed in a decoded preset; **C** 
 
 | Subsystem | Required semantic state | Evidence | Current ZYG status |
 | --- | --- | --- | --- |
-| Main oscillators A/B/C | Independent enable, mode, pitch, level, pan, unison, key/velocity zones and routing | D/O | C; partial M/R/UI for enabled wavetable pitch, level, pan, initial/random phase, position, unison and detune; zones/warps not R |
-| Wavetable | Table identity/content, frame position/interpolation, phase/memory, two warp slots, unison | D/O | C/I; partial M/R/UI for local mono RIFF WAVE frames on A/B/C, including deterministic random phase, FFT harmonic mip levels, pitch-based level crossfade and cubic phase interpolation; no phase-memory modes or warps |
+| Main oscillators A/B/C | Independent enable, mode, pitch, level, pan, unison, key/velocity zones and routing | D/O | C; partial M/R/UI for enabled wavetable pitch, level, pan, initial/random phase, position, unison, detune and a typed warp subset; zones and advanced unison not R |
+| Wavetable | Table identity/content, frame position/interpolation, phase/memory, two warp slots, unison | D/O | C/I; partial M/R/UI for local mono RIFF WAVE frames on A/B/C, deterministic random phase, FFT mip levels and cubic interpolation. Dual Bend/Asym/PWM/Flip, selected nonlinear and audio-rate FM/RM/AM warps R at 2×; many warp IDs and phase-memory modes not R |
 | Sample | Source, regions/loop/slices, scan, pitch, warp, modulation | D/O | C; factory sample index I; M/R/UI absent |
 | Multisample | SFZ mapping, child samples, key/velocity layers, timbre, envelope | D/O | C; SFZ/sample index I; M/R/UI absent |
 | Granular | Sample timeline, grain density/length/window/randomization, warp | D/O | C; sample index I; M/R/UI absent |
@@ -18,7 +18,7 @@ Legend: **D** = documented by Xfer; **O** = observed in a decoded preset; **C** 
 | Filters 1/2 | Exact type identity, cutoff/resonance/drive/var/wet/pan/level | D/O | C; partial M for both; Filter 1 cutoff/resonance/drive/wet R/UI with a ZYG trapezoidal state-variable low-pass, not type compatible; Filter 2 not R |
 | Mixer/routing | Seven routing slots, dual filter topology, Main/Direct/None, FX buses | D/O | C; partial M; first three source routes to Filter 1/Main/Direct/None R/UI; remaining edges and FX buses not R |
 | Modulation | Envelopes, LFO/path/chaos, macros, MIDI/MPE, audio-rate source modules | D/O | C; curved Env 1 R/UI; native sine plus imported free-rate Lorenz/Rössler/random-hold LFOs R; Macro 1–8 R/UI for two destinations; tempo-sync/path/custom and other sources not R |
-| Matrix | 64 ordered slots including source, target, curves, aux, slew, polarity, bypass | D/O | C; ordered routes partially M/UI; native/imported supported LFOs and Macro 1–8 to OSC A WT position or Filter 1 cutoff R; one real imported Lorenz route verified; other destinations, aux/curves/slew not R |
+| Matrix | 64 ordered slots including source, target, curves, aux, slew, polarity, bypass | D/O | C; ordered routes partially M/UI; supported LFOs/macros to OSC A WT position, dual-warp depth or Filter 1 cutoff R. Real imported Lorenz→WT-position and Macro 1→FM-depth routes verified; other destinations, aux/curves/slew not R |
 | Voice/global | Poly/mono/legato/portamento/priority, tuning, MPE, oversampling, voice steps | D/O | C; mono/master volume/polyphony partially M; basic mono/voice allocation R; other state not R |
 | Arp | 12 clips, rate, patterns, probability/gate/retrigger/velocity/transpose | D/O | C; factory arp index I; M/R/UI absent |
 | Clip sequencer | 12 MIDI clips, notes, launch/playback, keyboard span, MIDI out | D/O | C; factory clip index I; M/R/UI absent |
@@ -37,7 +37,7 @@ Serum 2 has three main oscillator slots, each with **wavetable, multisample, sam
 
 ### Wavetable
 
-Represent `relativePathToWT`, embedded/custom wavetable data where present, frame count/channels/rate, position, crossfade interpolation, initial/random phase, phase memory (`kContiguous`, `kPerVoice`), unison frame spread, warp 1 and warp 2 type/amount/variable controls. The manual also describes table editor thumbnails, drawing, FFT/harmonic editing, frame insert/sort/copy, formula generation, import/morph/export and saved tables. ZYG needs its own editor and interchange format. The corpus contains **two** distinct warp menu fields and many mode IDs; their complete observed enum values are in the schema. These are not yet mapped or rendered.
+Represent `relativePathToWT`, embedded/custom wavetable data where present, frame count/channels/rate, position, crossfade interpolation, initial/random phase, phase memory (`kContiguous`, `kPerVoice`), unison frame spread, warp 1 and warp 2 type/amount/variable controls. The manual also describes table editor thumbnails, drawing, FFT/harmonic editing, frame insert/sort/copy, formula generation, import/morph/export and saved tables. ZYG needs its own editor and interchange format. The corpus contains **two** distinct warp menu fields and many mode IDs; their complete observed enum values are in the schema. The typed subset in the table above is mapped and rendered; all other observed warp IDs remain preserved and explicitly unsupported.
 
 ### Sample
 

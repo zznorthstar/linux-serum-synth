@@ -24,6 +24,7 @@ find_library(ZSTD_LIBRARY NAMES zstd REQUIRED)
 
 add_library(zygzxg_core STATIC
     src/Patch.cpp
+    src/Oversampling.cpp
     src/SerumImporter.cpp
     src/SynthEngine.cpp
     src/Wavetable.cpp)

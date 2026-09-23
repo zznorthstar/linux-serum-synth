@@ -38,7 +38,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "OSC A/B/C local RIFF WAVE frames render with editable pitch, level, pan, initial phase, deterministic per-note random phase range, position, unison and detune. Control-thread FFT preparation creates ten octave-spaced harmonic mip levels per 2048-sample frame; render-time frequency selection crossfades levels and uses cubic phase interpolation. A synthetic saw test measures more than 20 dB reduction at a known high-note foldback bin. Warp, phase-memory modes and other oscillator modes remain unsupported."
+      "notes": "OSC A/B/C local RIFF WAVE frames render with pitch, level, pan, absolute/random phase, position, unison and detune. Control-thread FFT mipmaps and cubic interpolation reduce ordinary table aliasing. A typed dual-warp subset now renders Bend/Asym/PWM/Flip, selected nonlinear shapes, and audio-rate FM/RM/AM from main oscillators, SUB or NOISE through a 2x 63-tap FIR path. Many warp IDs, phase-memory modes, advanced unison and higher oversampling remain unsupported."
     },
     "sample_oscillator": {
       "researched": "partial",
@@ -133,7 +133,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "All populated imported rows remain typed and visible. Native sine, supported imported free-rate LFOs and Macro 1-8 execute for OSC A WT position or Filter 1 cutoff. One real imported Lorenz-to-WT-position route is verified. Other sources/destinations, aux, curves and slew remain preserved but unsupported; row source/destination/amount is editable only within the existing UI subset."
+      "notes": "All populated imported rows remain typed and visible. Supported LFOs and Macro 1-8 execute for OSC A WT position, dual-warp depth, or Filter 1 cutoff. The 2.0.24 fixture verifies imported Lorenz-to-WT-position and Macro 1-to-FM-depth routes. Other sources/destinations, aux, curves and slew remain preserved but unsupported; the current UI editor does not yet offer warp destinations."
     },
     "macros": {
       "researched": "partial",
@@ -204,6 +204,15 @@
       "tested": "partial",
       "real_preset_verified": false,
       "notes": "v2 JSON and VST3/CLAP host state retain typed patch, matrix, FX identities, LFO/macro/clip raw state, diagnostics and opaque Serum provenance. Local assets are references and reloaded; portable path handling and UI save/reopen host validation remain incomplete."
+    },
+    "wavetable_warp": {
+      "researched": "partial",
+      "parsed": "complete",
+      "mapped": "partial",
+      "implemented": "partial",
+      "tested": "partial",
+      "real_preset_verified": true,
+      "notes": "Importer reads observed kParamWarpMenu/Menu2 fields and maps a bounded native subset. Dual phase maps and dual amplitude operations each process in slot order; mixed phase/amplitude order is provisional. Audio-rate source sampling is independent of oscillator render order. The 2.0.24 fixture uses kFM_OSC with a zero-level OSC B source and macro-modulated depth. OSC/OSC2 source ordering is an inference pending oracle verification. PD, FMX/FMP, Self PD, Sync, Remap, filter-source modulation, numerous distortion IDs and 4x/8x modes remain unsupported."
     }
   },
   "tested_realtime_formats": [

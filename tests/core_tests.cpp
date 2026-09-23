@@ -1,5 +1,6 @@
 #include "SerumImporter.h"
 #include "SynthEngine.h"
+#include "Oversampling.h"
 #include "Wavetable.h"
 #include <algorithm>
 #include <cmath>
@@ -137,6 +138,138 @@ int main() {
         const double limitedFoldback = foldedBinMagnitude(bandlimitedSaw);
         if (!(rawFoldback > 1.0 && limitedFoldback < rawFoldback * 0.1))
             throw std::runtime_error("bandlimited wavetable oscillator did not suppress high-pitch foldback");
+
+        // The oscillator-warp 2x decimator must preserve the musical band and
+        // strongly reject content above the base-rate Nyquist boundary.
+        auto firMagnitude = [](double normalizedToOversampledNyquist) {
+            double real = 0.0, imaginary = 0.0;
+            for (std::size_t i = 0; i < zyg::oversamplingFir.size(); ++i) {
+                const double angle = 3.141592653589793 * normalizedToOversampledNyquist * double(i);
+                real += zyg::oversamplingFir[i] * std::cos(angle);
+                imaginary -= zyg::oversamplingFir[i] * std::sin(angle);
+            }
+            return std::hypot(real, imaginary);
+        };
+        if (!(firMagnitude(0.40) > 0.95 && firMagnitude(0.55) < 0.0001))
+            throw std::runtime_error("2x oscillator-warp decimator response is outside design bounds");
+
+        // Audio-rate FM must use an enabled oscillator even when its audible
+        // level is zero, and a macro route to warp depth must change audio.
+        zyg::Patch fmPatch;
+        for (int oscillatorIndex = 0; oscillatorIndex < 2; ++oscillatorIndex) {
+            auto& oscillator = fmPatch.oscillators[std::size_t(oscillatorIndex)];
+            oscillator.enabled = true;
+            oscillator.mode = zyg::OscMode::wavetable;
+            oscillator.audio.resize(2048);
+            for (int i = 0; i < 2048; ++i)
+                oscillator.audio[std::size_t(i)] = float(std::sin(6.283185307179586 * i / 2048.0));
+            zyg::prepareWavetableMipmaps(oscillator);
+        }
+        fmPatch.oscillators[1].octave = 1;
+        fmPatch.oscillators[1].volume = 0.0;
+        fmPatch.oscillators[0].warpDefinitions[0] = {zyg::WarpMode::frequencyMod, 1};
+        fmPatch.oscillators[0].warpOne = "native frequency modulation";
+        fmPatch.routes[0].target = zyg::RouteTarget::main;
+        fmPatch.routes[1].target = zyg::RouteTarget::none;
+        fmPatch.envelopes[0].attack = 0.0;
+        fmPatch.envelopes[0].hold = 1.0;
+        zyg::ModulationRoute fmDepth;
+        fmDepth.sourceKind = zyg::ModSource::macro;
+        fmDepth.sourceIndex = 0;
+        fmDepth.targetKind = zyg::ModTarget::warpOneAmount;
+        fmDepth.targetIndex = 0;
+        fmDepth.amount = 65.0;
+        fmPatch.macroValues[0] = 1.0;
+        fmPatch.modulation.push_back(fmDepth);
+        auto renderFm = [&](zyg::Patch patch) {
+            zyg::SynthEngine oscillator;
+            oscillator.prepare(48000.0);
+            oscillator.setPatch(&patch);
+            oscillator.noteOn(1, 48, 1.0f);
+            std::vector<float> output(8192), other(8192);
+            oscillator.render(output.data(), other.data(), 0, int(output.size()));
+            return output;
+        };
+        const auto fmAudio = renderFm(fmPatch);
+        auto disabledModulator = fmPatch;
+        disabledModulator.oscillators[1].enabled = false;
+        const auto noFmAudio = renderFm(disabledModulator);
+        double fmDifference = 0.0, fmEnergy = 0.0;
+        for (std::size_t i = 128; i < fmAudio.size(); ++i) {
+            if (!std::isfinite(fmAudio[i])) throw std::runtime_error("audio-rate FM produced non-finite output");
+            fmDifference += std::abs(fmAudio[i] - noFmAudio[i]);
+            fmEnergy += fmAudio[i] * fmAudio[i];
+        }
+        if (!(fmDifference > 10.0 && fmEnergy > 0.01))
+            throw std::runtime_error("zero-level oscillator did not act as an audio-rate FM source");
+        auto noDepthRoute = fmPatch;
+        noDepthRoute.modulation.clear();
+        const auto noDepthAudio = renderFm(noDepthRoute);
+        double routeDifference = 0.0;
+        for (std::size_t i = 128; i < fmAudio.size(); ++i)
+            routeDifference += std::abs(fmAudio[i] - noDepthAudio[i]);
+        if (routeDifference < 10.0)
+            throw std::runtime_error("macro-to-warp-depth route had no audio effect");
+        // Two carriers using the same audio-rate source must remain sample
+        // aligned even when that source is rendered between them (A, source B,
+        // then C). This catches oscillator-index-dependent modulation timing.
+        auto orderedFm = fmPatch;
+        orderedFm.modulation.clear();
+        orderedFm.oscillators[0].warpOneAmount = 0.65;
+        orderedFm.oscillators[0].pan = -1.0;
+        orderedFm.oscillators[2] = orderedFm.oscillators[0];
+        orderedFm.oscillators[2].pan = 1.0;
+        orderedFm.routes[0].target = zyg::RouteTarget::main;
+        orderedFm.routes[1].target = zyg::RouteTarget::none;
+        orderedFm.routes[2].target = zyg::RouteTarget::main;
+        zyg::SynthEngine orderedEngine;
+        orderedEngine.prepare(48000.0);
+        orderedEngine.setPatch(&orderedFm);
+        orderedEngine.noteOn(1, 48, 1.0f);
+        std::vector<float> orderedLeft(4096), orderedRight(4096);
+        orderedEngine.render(orderedLeft.data(), orderedRight.data(), 0, int(orderedLeft.size()));
+        double channelDifference = 0.0;
+        for (std::size_t i = 128; i < orderedLeft.size(); ++i)
+            channelDifference += std::abs(orderedLeft[i] - orderedRight[i]);
+        if (channelDifference > 1.0e-4)
+            throw std::runtime_error("audio-rate oscillator modulation depended on render order");
+        auto alignedDry = fmPatch;
+        alignedDry.modulation.clear();
+        alignedDry.oscillators[0].warpDefinitions[0] = {};
+        alignedDry.oscillators[0].octave = 4;
+        alignedDry.oscillators[1].enabled = false;
+        auto alignedOversampled = alignedDry;
+        alignedOversampled.oscillators[0].warpDefinitions[0] = {zyg::WarpMode::softClip, -1};
+        alignedOversampled.oscillators[0].warpOneAmount = 0.0;
+        const auto dryAlignedAudio = renderFm(alignedDry);
+        const auto oversampledAlignedAudio = renderFm(alignedOversampled);
+        double dot = 0.0, dryPower = 0.0, oversampledPower = 0.0;
+        for (std::size_t i = 256; i < dryAlignedAudio.size(); ++i) {
+            dot += dryAlignedAudio[i] * oversampledAlignedAudio[i];
+            dryPower += dryAlignedAudio[i] * dryAlignedAudio[i];
+            oversampledPower += oversampledAlignedAudio[i] * oversampledAlignedAudio[i];
+        }
+        const double correlation = dot / std::sqrt(dryPower * oversampledPower);
+        if (correlation < 0.99)
+            throw std::runtime_error("oversampled and dry oscillator paths lost phase alignment");
+        auto distorted = alignedDry;
+        distorted.oscillators[0].octave = 0;
+        distorted.oscillators[0].warpDefinitions[0] = {zyg::WarpMode::hardClip, -1};
+        distorted.oscillators[0].warpDefinitions[1] = {zyg::WarpMode::sineFold, -1};
+        distorted.oscillators[0].warpOneAmount = 0.75;
+        distorted.oscillators[0].warpTwoAmount = 0.6;
+        auto distortionDry = distorted;
+        distortionDry.oscillators[0].warpDefinitions = {};
+        const auto distortedAudio = renderFm(distorted);
+        const auto distortionDryAudio = renderFm(distortionDry);
+        double distortionDifference = 0.0;
+        for (std::size_t i = 256; i < distortedAudio.size(); ++i) {
+            if (!std::isfinite(distortedAudio[i]) || std::abs(distortedAudio[i]) > 2.0f)
+                throw std::runtime_error("dual nonlinear warp became unstable");
+            distortionDifference += std::abs(distortedAudio[i] - distortionDryAudio[i]);
+        }
+        if (distortionDifference < 10.0)
+            throw std::runtime_error("dual hard-clip/sine-fold warp had no audio effect");
         // A UI patch handoff must not silence a held note. The filter edit
         // must change the waveform while the voice continues to render.
         auto edited = init;
@@ -302,6 +435,14 @@ int main() {
             if (hasRenderedImportedLfo && std::none_of(patch.diagnostics.begin(), patch.diagnostics.end(),
                     [](const zyg::Diagnostic& d) { return d.status == "dsp_active" && d.path.starts_with("LFO"); }))
                 throw std::runtime_error("rendered imported LFO was not reported as DSP-active");
+            for (std::size_t i = 0; i < patch.oscillators.size(); ++i) {
+                const auto& oscillator = patch.oscillators[i];
+                if (oscillator.warpOne == "kFM_OSC") {
+                    if (oscillator.warpDefinitions[0].mode != zyg::WarpMode::frequencyMod
+                        || oscillator.warpDefinitions[0].sourceIndex < 0)
+                        throw std::runtime_error("real preset kFM_OSC warp did not map to native audio-rate FM");
+                }
+            }
             synth.setPatch(&patch);
             synth.noteOn(1, 48, 1.0f);
             std::fill(left.begin(), left.end(), 0);
@@ -325,6 +466,9 @@ int main() {
             original.oscillators[0].tablePosition = 123.5;
             original.oscillators[0].unison = 3;
             original.oscillators[0].detune = 0.15;
+            original.oscillators[0].warpDefinitions[0] = {zyg::WarpMode::frequencyMod, 1};
+            original.oscillators[0].warpOne = "native frequency modulation";
+            original.oscillators[0].modeState = zyg::Json{{"plainParams", zyg::Json{{"kParamWarpMenu", "kFM_OSC"}}}};
             original.filters[0].enabled = true;
             original.filters[0].cutoff = 0.33;
             original.routes[0].target = zyg::RouteTarget::direct;
@@ -340,15 +484,19 @@ int main() {
             original.modulation[0].destinationParameter = "kParamTablePos";
             original.modulation[0].targetKind = zyg::ModTarget::wavetablePosition;
             original.modulation[0].amount = 45;
+            original.modulation.push_back({});
+            original.modulation[1].targetKind = zyg::ModTarget::warpOneAmount;
+            original.modulation[1].targetIndex = 0;
             original.fx.push_back({"FXDelay", 0, 0, true, zyg::Json{{"wet", 20}}, {}});
             original.unknownSerumState = zyg::Json{{"unknown", zyg::Json{{"exact", 123}}}};
             original.originalPreset = {0, 1, 255};
             original.diagnostics.push_back({"FXRack0", "not_rendered", "effect retained"});
             const auto json = zyg::patchToJson(original);
             const auto restored = zyg::patchFromJson(json);
-            if (restored.modulation.size() != 1 || restored.modulation[0].amount != 45 ||
+            if (restored.modulation.size() != 2 || restored.modulation[0].amount != 45 ||
                 restored.modulation[0].sourceKind != zyg::ModSource::lfo ||
                 restored.modulation[0].targetKind != zyg::ModTarget::wavetablePosition ||
+                restored.modulation[1].targetKind != zyg::ModTarget::warpOneAmount ||
                 restored.fx.size() != 1 || restored.lfoOneRateHz != 2.5 || restored.macroValues[0] != 0.75 ||
                 restored.lfoDefinitions[0].shape != zyg::LfoShape::lorenz
                 || restored.lfoDefinitions[0].rateHz != 0.75 ||
@@ -360,11 +508,15 @@ int main() {
             legacyJson["modulation"][0].erase("sourceIndex");
             legacyJson["modulation"][0].erase("targetKind");
             legacyJson["modulation"][0].erase("targetIndex");
+            legacyJson["oscillators"][0].erase("warpDefinitions");
+            legacyJson["oscillators"][0]["warpOne"] = "";
             auto legacy = zyg::patchFromJson(legacyJson);
             zyg::mapLegacySerumModulationRoutes(legacy);
             if (legacy.modulation[0].sourceKind != zyg::ModSource::lfo ||
-                legacy.modulation[0].targetKind != zyg::ModTarget::wavetablePosition)
-                throw std::runtime_error("experimental v2 route did not migrate to native typed modulation");
+                legacy.modulation[0].targetKind != zyg::ModTarget::wavetablePosition ||
+                legacy.oscillators[0].warpDefinitions[0].mode != zyg::WarpMode::frequencyMod ||
+                legacy.oscillators[0].warpDefinitions[0].sourceIndex != 1)
+                throw std::runtime_error("experimental v2 state did not migrate to native typed DSP");
             if (restored.name != original.name || restored.author != original.author)
                 throw std::runtime_error(".zygpreset round trip lost identity fields");
             if (std::abs(restored.masterVolume - original.masterVolume) > 1e-9 || restored.mono != original.mono
@@ -375,6 +527,9 @@ int main() {
                 || std::abs(osc.tablePosition - original.oscillators[0].tablePosition) > 1e-9
                 || osc.unison != original.oscillators[0].unison)
                 throw std::runtime_error(".zygpreset round trip lost oscillator fields");
+            if (osc.warpDefinitions[0].mode != zyg::WarpMode::frequencyMod
+                || osc.warpDefinitions[0].sourceIndex != 1)
+                throw std::runtime_error(".zygpreset round trip lost native warp definition");
             if (!restored.filters[0].enabled || std::abs(restored.filters[0].cutoff - original.filters[0].cutoff) > 1e-9)
                 throw std::runtime_error(".zygpreset round trip lost filter fields");
             if (restored.routes[0].target != zyg::RouteTarget::direct)

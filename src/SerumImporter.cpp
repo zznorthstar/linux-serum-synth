@@ -107,6 +107,10 @@ bool firstSliceRenders(const std::string& path) {
             path == osc + "WTOsc" + std::to_string(i) + ".kParamTablePos" ||
             path == osc + "WTOsc" + std::to_string(i) + ".kParamInitialPhase" ||
             path == osc + "WTOsc" + std::to_string(i) + ".kParamRandomPhase" ||
+            path == osc + "WTOsc" + std::to_string(i) + ".kParamWarpMenu" ||
+            path == osc + "WTOsc" + std::to_string(i) + ".kParamWarpMenu2" ||
+            path == osc + "WTOsc" + std::to_string(i) + ".kParamWarp" ||
+            path == osc + "WTOsc" + std::to_string(i) + ".kParamWarp2" ||
             path == "RoutingSlot" + std::to_string(i) + ".kParamRoutingDest") return true;
     }
     return false;
@@ -125,6 +129,50 @@ RouteTarget routing(const std::string& s) {
     if (s == "kRoutingDestDirect") return RouteTarget::direct;
     if (s == "kRoutingDestNone") return RouteTarget::none;
     return RouteTarget::unknown;
+}
+int otherOscillator(int target, bool second) {
+    std::array<int, 2> sources {};
+    int at = 0;
+    for (int i = 0; i < 3; ++i) if (i != target) sources[std::size_t(at++)] = i;
+    return sources[second ? 1u : 0u];
+}
+WarpDefinition warpDefinition(const std::string& id, int target) {
+    WarpDefinition result;
+    if (id.empty()) return result;
+    if (id == "kBendPos") result.mode = WarpMode::bendPositive;
+    else if (id == "kBendNeg") result.mode = WarpMode::bendNegative;
+    else if (id == "kBendPosNeg") result.mode = WarpMode::bendBoth;
+    else if (id == "kASYMPos") result.mode = WarpMode::asymPositive;
+    else if (id == "kASYMNeg") result.mode = WarpMode::asymNegative;
+    else if (id == "kASYMPosNeg") result.mode = WarpMode::asymBoth;
+    else if (id == "kPWM") result.mode = WarpMode::pwm;
+    else if (id == "kFlip") result.mode = WarpMode::flip;
+    else if (id == "kDistHardClip") result.mode = WarpMode::hardClip;
+    else if (id == "kDistSoftClip") result.mode = WarpMode::softClip;
+    else if (id == "kDistSinFold") result.mode = WarpMode::sineFold;
+    else if (id == "kDistLinFold") result.mode = WarpMode::linearFold;
+    else if (id == "kDistSineShaper") result.mode = WarpMode::sineShaper;
+    else if (id == "kDistAsym") result.mode = WarpMode::asymmetricClip;
+    else if (id == "kDistRectify") result.mode = WarpMode::rectify;
+    else {
+        const auto sourceMode = [&](const char* prefix, WarpMode mode) {
+            const std::string p(prefix);
+            if (!id.starts_with(p)) return false;
+            const auto suffix = id.substr(p.size());
+            if (suffix == "OSC") result.sourceIndex = otherOscillator(target, false);
+            else if (suffix == "OSC2") result.sourceIndex = otherOscillator(target, true);
+            else if (suffix == "SUB") result.sourceIndex = 4;
+            else if (suffix == "NOISE") result.sourceIndex = 3;
+            else return false; // filter/audio variants need graph semantics
+            result.mode = mode;
+            return true;
+        };
+        if (!sourceMode("kFM_", WarpMode::frequencyMod)
+            && !sourceMode("kRM_", WarpMode::ringMod)
+            && !sourceMode("kAM_", WarpMode::amplitudeMod))
+            result.mode = WarpMode::unknown;
+    }
+    return result;
 }
 std::string sourcePath(const Json& mode, OscMode type) {
     switch (type) {
@@ -258,6 +306,16 @@ Patch loadSerumFile(const std::filesystem::path& file, const std::filesystem::pa
 }
 
 void mapLegacySerumModulationRoutes(Patch& patch) {
+    for (int i = 0; i < 3; ++i) {
+        auto& oscillator = patch.oscillators[std::size_t(i)];
+        const auto& p = params(oscillator.modeState);
+        if (oscillator.warpOne.empty()) oscillator.warpOne = string(p, "kParamWarpMenu");
+        if (oscillator.warpTwo.empty()) oscillator.warpTwo = string(p, "kParamWarpMenu2");
+        if (oscillator.warpDefinitions[0].mode == WarpMode::off && !oscillator.warpOne.empty())
+            oscillator.warpDefinitions[0] = warpDefinition(oscillator.warpOne, i);
+        if (oscillator.warpDefinitions[1].mode == WarpMode::off && !oscillator.warpTwo.empty())
+            oscillator.warpDefinitions[1] = warpDefinition(oscillator.warpTwo, i);
+    }
     for (auto& route : patch.modulation) {
         if (route.sourceKind == ModSource::unknown) {
             if (route.source >= 6 && route.source <= 15) {
@@ -272,6 +330,12 @@ void mapLegacySerumModulationRoutes(Patch& patch) {
                 route.targetIndex = route.destinationInstance;
             } else if (route.destinationModule == "VoiceFilter" && route.destinationParameter == "kParamFreq") {
                 route.targetKind = ModTarget::filterCutoff;
+                route.targetIndex = route.destinationInstance;
+            } else if (route.destinationModule == "WTOsc" && route.destinationParameter == "kParamWarp") {
+                route.targetKind = ModTarget::warpOneAmount;
+                route.targetIndex = route.destinationInstance;
+            } else if (route.destinationModule == "WTOsc" && route.destinationParameter == "kParamWarp2") {
+                route.targetKind = ModTarget::warpTwoAmount;
                 route.targetIndex = route.destinationInstance;
             }
         }
@@ -323,12 +387,22 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         osc.tablePosition = number(mp, "kParamTablePos", 0.0);
         osc.initialPhase = number(mp, "kParamInitialPhase", 0.0);
         osc.randomPhase = number(mp, "kParamRandomPhase", 0.0);
-        osc.warpOne = string(mp, "kParamWarpMode");
-        osc.warpTwo = string(mp, "kParamWarpMode2");
+        osc.warpOne = string(mp, "kParamWarpMenu", string(mp, "kParamWarpMode"));
+        osc.warpTwo = string(mp, "kParamWarpMenu2", string(mp, "kParamWarpMode2"));
         osc.warpOneAmount = number(mp, "kParamWarp", 0.0);
         osc.warpTwoAmount = number(mp, "kParamWarp2", 0.0);
+        osc.warpDefinitions[0] = warpDefinition(osc.warpOne, i);
+        osc.warpDefinitions[1] = warpDefinition(osc.warpTwo, i);
         countMapped(patch, mp, key + "." + modeKey, {"kParamTablePos", "kParamInitialPhase", "kParamRandomPhase",
-                                "kParamWarpMode", "kParamWarpMode2", "kParamWarp", "kParamWarp2"});
+                                "kParamWarpMenu", "kParamWarpMenu2", "kParamWarpMode", "kParamWarpMode2",
+                                "kParamWarp", "kParamWarp2"});
+        for (int slot = 0; slot < 2; ++slot) {
+            const auto& definition = osc.warpDefinitions[std::size_t(slot)];
+            const auto& id = slot == 0 ? osc.warpOne : osc.warpTwo;
+            if (!id.empty()) diagnostic(patch, key + "." + modeKey + ".Warp" + std::to_string(slot + 1),
+                definition.mode == WarpMode::unknown ? "not_rendered" : "dsp_active",
+                definition.mode == WarpMode::unknown ? "warp retained without native DSP" : "native warp DSP active");
+        }
         if (osc.enabled && osc.mode == OscMode::wavetable) loadWavetable(patch, osc, i, root);
         else if (osc.enabled) {
             const auto path = safeAssetPath(root, assetCategory(osc.mode), osc.asset);
@@ -418,6 +492,12 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         } else if (route.destinationModule == "VoiceFilter" && route.destinationParameter == "kParamFreq") {
             route.targetKind = ModTarget::filterCutoff;
             route.targetIndex = route.destinationInstance;
+        } else if (route.destinationModule == "WTOsc" && route.destinationParameter == "kParamWarp") {
+            route.targetKind = ModTarget::warpOneAmount;
+            route.targetIndex = route.destinationInstance;
+        } else if (route.destinationModule == "WTOsc" && route.destinationParameter == "kParamWarp2") {
+            route.targetKind = ModTarget::warpTwoAmount;
+            route.targetIndex = route.destinationInstance;
         }
         const Json& p = params(m);
         route.amount = number(p, "kParamAmount", 0.0);
@@ -436,7 +516,13 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
     }
     for (const auto& route : patch.modulation) {
         const bool targetRendered = (route.targetKind == ModTarget::wavetablePosition && route.targetIndex == 0)
-            || (route.targetKind == ModTarget::filterCutoff && route.targetIndex == 0);
+            || (route.targetKind == ModTarget::filterCutoff && route.targetIndex == 0)
+            || ((route.targetKind == ModTarget::warpOneAmount || route.targetKind == ModTarget::warpTwoAmount)
+                && route.targetIndex >= 0 && route.targetIndex < 3
+                && patch.oscillators[std::size_t(route.targetIndex)].warpDefinitions[
+                    route.targetKind == ModTarget::warpOneAmount ? 0u : 1u].mode != WarpMode::unknown
+                && patch.oscillators[std::size_t(route.targetIndex)].warpDefinitions[
+                    route.targetKind == ModTarget::warpOneAmount ? 0u : 1u].mode != WarpMode::off);
         const bool sourceRendered = route.sourceKind == ModSource::macro
             || (route.sourceKind == ModSource::lfo && route.sourceIndex >= 0 && route.sourceIndex < 10
                 && patch.lfoDefinitions[std::size_t(route.sourceIndex)].shape != LfoShape::unknown

@@ -13,8 +13,19 @@ using Json = nlohmann::json;
 enum class OscMode { wavetable, sample, multisample, granular, spectral, sub, noise, unknown };
 enum class RouteTarget { filter, main, direct, none, unknown };
 enum class ModSource { unknown, lfo, macro };
-enum class ModTarget { unknown, wavetablePosition, filterCutoff };
+enum class ModTarget { unknown, wavetablePosition, warpOneAmount, warpTwoAmount, filterCutoff };
 enum class LfoShape { unknown, sine, lorenz, rossler, randomHold };
+enum class WarpMode {
+    off, bendPositive, bendNegative, bendBoth, asymPositive, asymNegative, asymBoth,
+    pwm, flip, frequencyMod, ringMod, amplitudeMod,
+    hardClip, softClip, sineFold, linearFold, sineShaper, asymmetricClip, rectify,
+    unknown
+};
+
+struct WarpDefinition {
+    WarpMode mode = WarpMode::off;
+    int sourceIndex = -1; // native oscillator index; -1 for self-contained warps
+};
 
 struct LfoDefinition {
     LfoShape shape = LfoShape::unknown;
@@ -38,6 +49,7 @@ struct Oscillator {
     double tablePosition = 0.0, initialPhase = 0.0, randomPhase = 0.0;
     std::string warpOne, warpTwo;
     double warpOneAmount = 0.0, warpTwoAmount = 0.0;
+    std::array<WarpDefinition, 2> warpDefinitions;
     std::vector<float> audio; // prepared on the control thread from a user-owned asset
     // Successive octave-bandlimited copies of `audio`, excluding the raw
     // level. Each complete level has audio.size() samples. This cache is

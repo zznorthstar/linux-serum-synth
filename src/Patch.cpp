@@ -59,6 +59,34 @@ RouteTarget routeTargetFromString(const std::string& name) {
 }
 
 namespace {
+const char* warpModeName(WarpMode mode) {
+    switch (mode) {
+        case WarpMode::off: return "off";
+        case WarpMode::bendPositive: return "bendPositive"; case WarpMode::bendNegative: return "bendNegative";
+        case WarpMode::bendBoth: return "bendBoth"; case WarpMode::asymPositive: return "asymPositive";
+        case WarpMode::asymNegative: return "asymNegative"; case WarpMode::asymBoth: return "asymBoth";
+        case WarpMode::pwm: return "pwm"; case WarpMode::flip: return "flip";
+        case WarpMode::frequencyMod: return "frequencyMod"; case WarpMode::ringMod: return "ringMod";
+        case WarpMode::amplitudeMod: return "amplitudeMod"; case WarpMode::hardClip: return "hardClip";
+        case WarpMode::softClip: return "softClip"; case WarpMode::sineFold: return "sineFold";
+        case WarpMode::linearFold: return "linearFold"; case WarpMode::sineShaper: return "sineShaper";
+        case WarpMode::asymmetricClip: return "asymmetricClip"; case WarpMode::rectify: return "rectify";
+        default: return "unknown";
+    }
+}
+WarpMode warpModeFromName(const std::string& name) {
+    if (name == "off") return WarpMode::off;
+    if (name == "bendPositive") return WarpMode::bendPositive; if (name == "bendNegative") return WarpMode::bendNegative;
+    if (name == "bendBoth") return WarpMode::bendBoth; if (name == "asymPositive") return WarpMode::asymPositive;
+    if (name == "asymNegative") return WarpMode::asymNegative; if (name == "asymBoth") return WarpMode::asymBoth;
+    if (name == "pwm") return WarpMode::pwm; if (name == "flip") return WarpMode::flip;
+    if (name == "frequencyMod") return WarpMode::frequencyMod; if (name == "ringMod") return WarpMode::ringMod;
+    if (name == "amplitudeMod") return WarpMode::amplitudeMod; if (name == "hardClip") return WarpMode::hardClip;
+    if (name == "softClip") return WarpMode::softClip; if (name == "sineFold") return WarpMode::sineFold;
+    if (name == "linearFold") return WarpMode::linearFold; if (name == "sineShaper") return WarpMode::sineShaper;
+    if (name == "asymmetricClip") return WarpMode::asymmetricClip; if (name == "rectify") return WarpMode::rectify;
+    return WarpMode::unknown;
+}
 const char* lfoShapeName(LfoShape shape) {
     switch (shape) {
         case LfoShape::sine: return "sine";
@@ -76,6 +104,9 @@ LfoShape lfoShapeFromName(const std::string& name) {
     return LfoShape::unknown;
 }
 Json oscillatorToJson(const Oscillator& osc) {
+    Json warpDefinitions = Json::array();
+    for (const auto& warp : osc.warpDefinitions)
+        warpDefinitions.push_back({{"mode", warpModeName(warp.mode)}, {"sourceIndex", warp.sourceIndex}});
     return Json{
         {"enabled", osc.enabled}, {"mode", oscModeToString(osc.mode)}, {"modeId", osc.modeId},
         {"asset", osc.asset}, {"userSelectedAsset", osc.userSelectedAsset},
@@ -84,6 +115,7 @@ Json oscillatorToJson(const Oscillator& osc) {
         {"tablePosition", osc.tablePosition}, {"initialPhase", osc.initialPhase}, {"randomPhase", osc.randomPhase},
         {"warpOne", osc.warpOne}, {"warpTwo", osc.warpTwo},
         {"warpOneAmount", osc.warpOneAmount}, {"warpTwoAmount", osc.warpTwoAmount},
+        {"warpDefinitions", warpDefinitions},
         {"frameSize", osc.frameSize}, {"sampleRate", osc.sampleRate},
         {"modeState", osc.modeState}, {"additional", osc.additional},
     };
@@ -109,6 +141,13 @@ void oscillatorFromJson(const Json& j, Oscillator& osc) {
     if (j.contains("warpTwo")) osc.warpTwo = j.at("warpTwo").get<std::string>();
     if (j.contains("warpOneAmount")) osc.warpOneAmount = j.at("warpOneAmount").get<double>();
     if (j.contains("warpTwoAmount")) osc.warpTwoAmount = j.at("warpTwoAmount").get<double>();
+    if (j.contains("warpDefinitions") && j.at("warpDefinitions").is_array()) {
+        const auto& definitions = j.at("warpDefinitions");
+        for (std::size_t i = 0; i < osc.warpDefinitions.size() && i < definitions.size(); ++i) {
+            osc.warpDefinitions[i].mode = warpModeFromName(definitions[i].value("mode", std::string{"unknown"}));
+            osc.warpDefinitions[i].sourceIndex = definitions[i].value("sourceIndex", -1);
+        }
+    }
     if (j.contains("frameSize")) osc.frameSize = j.at("frameSize").get<unsigned>();
     if (j.contains("sampleRate")) osc.sampleRate = j.at("sampleRate").get<double>();
     osc.modeState = j.value("modeState", Json{});
@@ -173,6 +212,8 @@ Json patchToJson(const Patch& patch) {
         {"sourceKind", m.sourceKind == ModSource::lfo ? "lfo" : m.sourceKind == ModSource::macro ? "macro" : "unknown"},
         {"sourceIndex", m.sourceIndex},
         {"targetKind", m.targetKind == ModTarget::wavetablePosition ? "wavetablePosition" :
+            m.targetKind == ModTarget::warpOneAmount ? "warpOneAmount" :
+            m.targetKind == ModTarget::warpTwoAmount ? "warpTwoAmount" :
             m.targetKind == ModTarget::filterCutoff ? "filterCutoff" : "unknown"},
         {"targetIndex", m.targetIndex},
         {"sourceName", m.sourceName}, {"destinationModule", m.destinationModule},
@@ -248,6 +289,8 @@ Patch patchFromJson(const Json& json) {
             m.sourceIndex = j.value("sourceIndex", 0);
             const auto targetKind = j.value("targetKind", std::string{"unknown"});
             m.targetKind = targetKind == "wavetablePosition" ? ModTarget::wavetablePosition :
+                targetKind == "warpOneAmount" ? ModTarget::warpOneAmount :
+                targetKind == "warpTwoAmount" ? ModTarget::warpTwoAmount :
                 targetKind == "filterCutoff" ? ModTarget::filterCutoff : ModTarget::unknown;
             m.targetIndex = j.value("targetIndex", 0);
             m.sourceName = j.value("sourceName", std::string{});
