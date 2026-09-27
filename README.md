@@ -1,22 +1,76 @@
 # ZYG-ZXG
 
-ZYG-ZXG / Linux Serum Synth is an independent, GPL-3.0, Linux-native synthesizer being built to interpret Serum 2 presets with original DSP. It is **not affiliated with Xfer Records**. This is an **early engineering build**, not a production-compatible instrument. Native VST3i and CLAP instruments build and have separate REAPER realtime MIDI/transport tests. There is no public binary release yet.
+**A native Linux wavetable synthesizer (VST3 + CLAP) with its own DSP, a Y2K pixel-art interface, and the ability to open Serum 2 presets.**
 
-The supplied Serum 2.1.2 user preset decodes and its wavetable path renders in a REAPER project. Its modulation and FX do **not** yet render. A second user preset authored in 2.0.24 has a detailed partial [verification report](docs/preset_verification/TSP_OVERVIEW_YAANO_Synth_stutter_candy.md). The 626 supplied factory presets were authored in Serum 2.0.11–2.0.15; decoding them is not a claim that they play correctly. See [the support dashboard](compatibility/serum2_support.json) and [compatibility matrix](docs/SERUM2_COMPATIBILITY_MATRIX.md).
+> **Version 0.1.0 beta — unstable.** Expect bugs and crashes; save your projects often.
+> **Serum 2 presets are only partially supported.** Most of them load, but many parameters are not yet interpreted correctly, and **imported presets currently do not sound like they do in Serum 2** — often not even close. Closing that gap is the main work item for the next versions (see [Roadmap](#roadmap)).
+>
+> ZYG-ZXG is an independent GPL-3.0 project. It is **not affiliated with, endorsed by, or derived from Xfer Records**. It contains no Xfer code, and it ships no Xfer presets, wavetables or samples. "Serum" is a trademark of Xfer Records.
 
-The first deliverables include a [factory-corpus schema](docs/SERUM2_CORPUS_SCHEMA.json), bounded `.SerumPreset` decoder, local-asset indexer, and native C++ vertical slice. Unknown fields are retained, not silently declared compatible. The indexer points at content the user obtained; it does not bundle or copy Xfer assets.
+![OSC page](docs/screenshots/osc.png)
 
-## Install on Linux
+## The vision
 
-When an alpha release archive is available, extract it and copy the entire `ZYG-ZXG.vst3` bundle to `~/.vst3/` and `ZYG-ZXG.clap` to `~/.clap/`. Restart or rescan REAPER, insert **VST3i: ZYG-ZXG** or **CLAP: ZYG-ZXG** on an instrument track, arm it and enable monitoring. Play MIDI notes. The editor shows MIDI activity, active voices and output level; **Audition C3** can test the audio path while the track is processed. [Step-by-step install guide](docs/INSTALL_LINUX.md).
+Linux music makers don't have a modern, Serum-class wavetable synth that runs natively. ZYG-ZXG aims to be that instrument:
 
-Click **INIT** to start from a built-in sine, choose OSC A/B/C, browse a mono WAV wavetable, edit oscillator phase/random phase, SUB/NOISE, filter, envelope, macros and native sine LFO matrix routes, then **Save ZYG**. Use **Open ZYG** to reload a `.zygpreset`. For Serum import, click **Content** and choose a legally owned local Serum content root containing `Tables/` and `Samples/`, then **Load Serum**. The FX tab lists imported effect instances and labels them as DSP pending. No Xfer assets ship with the plugin. The editor uses the repository's `ui-design-kit/` logo, sprite controls, palette, and fixed 1000x600 layout.
+- **A real instrument on Linux first.** It should run natively in REAPER on Linux (the primary target) and in other hosts, as VST3 and CLAP, with no Wine and no Windows binaries.
+- **Its own sound engine.** All DSP is original: wavetable/sample/granular/spectral oscillators, ~80 filter types, envelopes, LFOs, a modulation matrix, and a 13-effect rack with splitters. ZYG-ZXG is not a clone of anyone's code.
+- **Your Serum 2 presets open, and should *behave* like Serum.** Serum 2 presets are an *interoperability input*. The goal is not bit-identical output. The goal is that a reese still sounds like that reese and a growl still growls: the same character, movement and levels. The importer keeps everything it doesn't understand yet, so nothing is silently thrown away. As mappings get calibrated against real Serum, the same presets will sound progressively closer.
+- **Made for electronic and bass music.** ZYG-only extras include a PUMP ducker, a STUTTER beat-repeat, host sidechain as a modulation source, resampling the output into an oscillator, and MIDI CC as a modulation source.
+- **An interface with character.** It uses a Serum-style layout drawn as crisp Y2K pixel art. Every display (oscilloscopes, the 3D wavetable, filter response + live spectrum analyzer, envelope, LFO) is rendered as late-1990s hardware: green LCDs and violet CRTs with pixel grids, scanlines, phosphor persistence and glow.
+- **Open.** GPL-3.0, developed in the open, with honest compatibility reporting in [`compatibility/serum2_support.json`](compatibility/serum2_support.json) and the [compatibility matrix](docs/SERUM2_COMPATIBILITY_MATRIX.md).
 
-Tested preset containers: authored Serum **2.0.11–2.0.15** factory corpus (structural decode only), **2.0.24** and **2.1.2** supplied user presets (partial native mapping/render). Full semantic compatibility is unmeasured.
+## What works in 0.1 beta
 
-## Build the experimental VST3 and CLAP
+- VST3 and CLAP instruments for Linux x86_64, tested mainly in REAPER 7 on X11. The editor opens at 1280×720, can be resized, has 1×/2×/3× pixel scaling and uses OpenGL rendering (can be switched off).
+- **Oscillators:** 3 main oscillators (wavetable, sample, multisample/SFZ, granular, spectral) with unison and 2 warp slots each, plus SUB and NOISE.
+- **Filters and routing:** two filters with ~80 types, per-source routing, and mix buses.
+- **Modulation:** 4 envelopes, 10 LFOs (incl. chaos types and drawable paths), 8 macros, velocity/note, mod wheel, pitch bend, aftertouch, MPE, random/alternate, voice sources, audio-rate sources and MIDI CC.
+  - **Drag and drop** any source handle onto a knob, field or fader, or **right-click any control → MOD SOURCE**.
+  - The matrix page is the precise editor for every route.
+- **FX rack:** 13 effects and 3 band splitters, with animated scopes and per-effect glyphs.
+- **Arp and clips:** arpeggiator and clip player.
+- **Presets:**
+  - **Browser:** search, a Factory/User filter, a Serum/ZYG format filter and a type list. It stays open while you audition presets with click or ↑/↓.
+  - **Navigation:** the ◀ ▶ arrows continue through the browser list.
+  - **Native format:** `.zygpreset` saves the full patch, including embedded wavetables.
+- **User library in `~/Documents/ZYG-ZXG`** (Presets, Wavetables, Noises, Samples, Impulses), like Serum's Documents folder. It can be moved from the menu. Serum and ZYG presets you put there are all treated as user presets.
+- **Serum 2 import:**
+  - It decodes `.SerumPreset` files and maps most known parameters, modulation routes, FX and assets onto the ZYG engine.
+  - Anything it can't interpret is kept and listed under **NOTES** in the top bar.
+  - Serum wavetables, samples and factory presets are **not included**. Point ZYG-ZXG at content you legally own (MENU → SET CONTENT FOLDER).
+- An example patch built entirely from ZYG content: [`presets/ZYG Showcase - Acid Morph.zygpreset`](presets/).
 
-On x86_64 Linux, install CMake 3.24+, Ninja, a C++20 compiler, ALSA/X11/FreeType/OpenGL development packages and `libzstd`. Configuration fetches pinned JUCE 8.0.9 and nlohmann/json 3.11.3 from upstream. No Xfer content is downloaded or bundled.
+## Known limitations
+
+- **Imported Serum 2 presets sound different from Serum 2.**
+  - Parameter scaling, modulation amounts, warp/filter/FX curves and envelope/LFO timing are ZYG's own guesses. None of them has been calibrated against real Serum yet ([details](docs/SERUM_ORACLE_HANDOFF.md)).
+  - Some Serum features are stored but not rendered, e.g. tempo-synced envelopes and Serum 1 compatibility mode.
+  - The legacy `.fxp` format is not supported.
+- **Beta stability:**
+  - Only REAPER on X11 has been exercised by hand. CLAP editor use, other DAWs and Wayland are largely untested.
+  - Velocity/note curve editing, macro renaming, effect-chain presets and drag-reordering of FX/matrix rows are missing.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![MIX](docs/screenshots/mix.png) | ![FX](docs/screenshots/fx.png) |
+| ![MATRIX](docs/screenshots/matrix.png) | ![GLOBAL](docs/screenshots/global.png) |
+
+All screenshots use the ZYG-native showcase patch.
+
+## Install (Linux x86_64)
+
+1. Download `ZYG-ZXG-linux-x86_64.tar.gz` from the [releases page](https://github.com/zznorthstar/linux-serum-synth/releases) and extract it.
+2. Copy the whole `ZYG-ZXG.vst3` folder into `~/.vst3/` and `ZYG-ZXG.clap` into `~/.clap/`.
+3. Restart or rescan your DAW, insert **ZYG-ZXG** on an instrument track, arm it and play.
+
+More detail is in [docs/INSTALL_LINUX.md](docs/INSTALL_LINUX.md).
+
+## Build from source
+
+You need x86_64 Linux, CMake 3.24+, Ninja, a C++20 compiler, `libzstd`, and ALSA/X11/FreeType/OpenGL development packages. JUCE 8.0.9, nlohmann/json and clap-juce-extensions are fetched at pinned versions.
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -24,22 +78,23 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-The build outputs are `build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3` and `build/ZYGZXG_artefacts/Release/CLAP/ZYG-ZXG.clap`. `ZYG_BUILD_CLAP=OFF` skips the optional upstream CLAP extension. A GitHub Actions workflow builds, tests and packages both formats; it attaches artifacts only to explicitly published prereleases. No stable release is claimed.
+The outputs are `build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3` and `build/ZYGZXG_artefacts/Release/CLAP/ZYG-ZXG.clap`. With `-DZYG_BUILD_TOOLS=ON` you also get an offline preset renderer (`zygzxg_render`) and a UI snapshot tool (`zygzxg_ui_snapshot`).
 
-## Research tools
+## Roadmap
 
-Python 3.11+ is required for the CLI:
+1. **Make Serum presets sound right.** Calibrate parameter scaling, modulation amounts and the warp/filter/FX/envelope curves against real Serum 2 through controlled test presets. This work is planned on Windows with a licensed Serum ([plan](docs/SERUM_ORACLE_HANDOFF.md)).
+2. **Finish the feature set.** Matrix aux sources and curves in the UI, velocity/note curves, tempo-synced envelopes, macro naming, FX-chain presets.
+3. **Broaden host testing.** Verify CLAP, Bitwig, Ardour and Wayland, and harden stability toward a 1.0 release.
 
-```sh
-python3 -m venv .venv
-.venv/bin/pip install -e .
-.venv/bin/zygzxg index-assets /path/to/extracted-or-installed/Serum-content --output /path/to/private/index.json
-.venv/bin/zygzxg inspect-preset /path/to/preset.SerumPreset --asset-index /path/to/private/index.json
-.venv/bin/zygzxg resolve-asset /path/to/private/index.json wavetable 'S2 Tables/Default Shapes.wav'
-```
+## Project docs
 
-If running without installing the script entry point, use `PYTHONPATH=. .venv/bin/python -m zygzxg.cli ...`. The content root should directly contain directories such as `Tables`, `Samples`, `Multisamples`, `Presets`, and `Impulses`. The index stores that root's absolute path and should stay private on the user's machine.
+- [HANDOFF.md](HANDOFF.md): current engineering status.
+- [DESIGN.md](DESIGN.md): the UI design system.
+- [docs/DSP_DECISIONS.md](docs/DSP_DECISIONS.md): DSP choices and every unverified assumption.
+- [docs/TESTING.md](docs/TESTING.md): what has been verified, and how.
+- [AGENTS.md](AGENTS.md): engineering rules (including how Xfer material may and may not be used).
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to contribute.
 
-The supplied 2.1.5 full installer was safely extracted with `7z` into the ignored `.local-serum-content/`; the updater has not been executed. Windows software is not a runtime dependency. See the [local installation inventory](docs/SERUM2_INSTALLATION_INVENTORY.md). The supplied `.fxp` is a legacy VST chunk preset and is not yet parsed.
+## License
 
-See [HANDOFF.md](HANDOFF.md) for exact status, [AGENTS.md](AGENTS.md) for persistent engineering rules, [docs/TESTING.md](docs/TESTING.md) for verification, and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance.
+GPL-3.0. Third-party components and their licenses are listed in [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).

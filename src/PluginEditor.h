@@ -1,70 +1,71 @@
 #pragma once
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
-#include <array>
+#include "ui/Widgets.h"
+#include "ui/Panels.h"
+#include <memory>
 
-class ZygPixelLookAndFeel final : public juce::LookAndFeel_V4 {
-public:
-    ZygPixelLookAndFeel();
-    void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,
-        float sliderPos, float rotaryStartAngle, float rotaryEndAngle, juce::Slider&) override;
-    void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour&,
-        bool highlighted, bool down) override;
-    void drawToggleButton(juce::Graphics&, juce::ToggleButton&, bool highlighted, bool down) override;
-    void drawComboBox(juce::Graphics&, int width, int height, bool down,
-        int buttonX, int buttonY, int buttonW, int buttonH, juce::ComboBox&) override;
-    void drawLinearSlider(juce::Graphics&, int x, int y, int width, int height,
-        float sliderPos, float minSliderPos, float maxSliderPos,
-        juce::Slider::SliderStyle, juce::Slider&) override;
-    void drawPopupMenuBackground(juce::Graphics&, int width, int height) override;
-    juce::Font getTextButtonFont(juce::TextButton&, int height) override;
-    juce::Font getComboBoxFont(juce::ComboBox&) override;
-private:
-    juce::Image knob32, knob48, knob64;
-};
+namespace zyg::ui { class TopBar; class ModSection; class KeyboardDock; class Toast; class ModalLayer; }
 
-class ZygEditor final : public juce::AudioProcessorEditor, private juce::Timer {
+// Serum-2-layout pixel-art editor. The window is freely resizable (default 1280x720);
+// widgets live on a logical canvas of window size / integer UI scale (100%, 200%, 300%)
+// so pixel art always stays crisp.
+class ZygEditor final : public juce::AudioProcessorEditor, public zyg::ui::UiScaleTarget, public juce::DragAndDropContainer, private juce::Timer {
 public:
     explicit ZygEditor(ZygProcessor& processor);
     ~ZygEditor() override;
     void paint(juce::Graphics&) override;
     void resized() override;
-private:
-    void timerCallback() override;
-    void configureSlider(juce::Slider&, double min, double max, double step);
-    void editRoute(const std::function<void(zyg::ModulationRoute&)>&);
-    void syncRoute(const zyg::Patch&);
-    void showPage(bool fx);
-    ZygProcessor& processor;
-    bool syncing = false;
-    bool fxPage = false;
-    bool snapshotWritten = false;
-    unsigned lastMidiCount = 0;
-    int midiLightTicks = 0;
-    std::unique_ptr<juce::FileChooser> chooser;
-    ZygPixelLookAndFeel pixelLook;
-    juce::Image logo;
+    bool keyPressed(const juce::KeyPress&) override;
 
-    juce::Label title, presetName, status, oscName, unsupported, midiIndicator, voiceCount, meterText;
-    juce::TextButton init {"INIT"}, loadSerum {"Load Serum"}, loadNative {"Open ZYG"},
-        saveNative {"Save ZYG"}, selectAssets {"Content"}, diagnostics {"Diagnostics"},
-        loadWavetable {"Browse wavetable"}, addRoute {"+ route"};
-    juce::TextButton synthTab {"SYNTH"}, fxTab {"FX"};
-    juce::TextEditor fxReadout;
-    juce::ToggleButton audition {"C3 HOLD"};
-    juce::ToggleButton subEnabled {"SUB"}, noiseEnabled {"NOISE"};
-    juce::Slider subLevel, noiseLevel;
-    juce::TextButton browseNoise {"Browse noise"}, nativeLfo {"Use sine"};
-    juce::ToggleButton oscEnabled {"OSC A"}, filterEnabled {"FILTER 1"};
-    juce::ComboBox oscSelect, oscRoute, routeList, matrixSource, matrixDestination;
-    juce::Slider tablePosition, master, cutoff, resonance, filterDrive, filterMix, lfoRate, matrixAmount;
-    std::array<juce::Slider, 9> oscSliders;
-    std::array<juce::Slider, 5> envSliders;
-    std::array<juce::Slider, 4> macroSliders;
-    std::array<juce::Label, 9> oscLabels;
-    std::array<juce::Label, 5> envLabels;
-    std::array<juce::Label, 4> macroLabels;
-    juce::Label tableLabel, masterLabel, cutoffLabel, resonanceLabel, driveLabel, mixLabel,
-        lfoLabel, matrixLabel, amountLabel;
+    static constexpr int minLogicalWidth = 1000, minLogicalHeight = 600;
+    static constexpr int defaultWidth = 1280, defaultHeight = 720;
+    // Page indices: 0 OSC, 1 MIX, 2 FX, 3 MATRIX, 4 GLOBAL.
+    void showPage(int page);
+    int currentPage() const noexcept { return page_; }
+    void setScale(int scale);
+    void setUiScale(int s) override { setScale(s); }
+    int scale() const noexcept { return scale_; }
+    // Renders the current UI at `scale` x its logical size (for documentation / tests).
+    juce::Image snapshot(int scale = 1, bool settle = true);
+    void openEditor(int which);          // 0 clip, 1 arp
+    void openModalByName(const juce::String& name);   // test hook: browser, about, diag, clip, arp
+    void refreshNow();
+    zyg::ui::ModalLayer& modal();
+    zyg::ui::UiContext& context() { return ctx_; }
+private:
+    void dragOperationStarted(const juce::DragAndDropTarget::SourceDetails&) override;
+    void dragOperationEnded(const juce::DragAndDropTarget::SourceDetails&) override;
+    void timerCallback() override;
+    void layoutContent();
+    void openBrowserFor(int oscIndex);
+    ZygProcessor& proc_;
+    zyg::ui::UiContext ctx_;
+    zyg::ui::PixelLookAndFeel look_;
+
+    struct Content : juce::Component { void paint(juce::Graphics& g) override; } content_;
+    zyg::ui::TopBar* top_ = nullptr;
+    std::vector<std::unique_ptr<zyg::ui::Panel>> pages_;
+    std::unique_ptr<zyg::ui::TopBar> topOwned_;
+    std::unique_ptr<zyg::ui::ModSection> modSection_;
+    std::unique_ptr<zyg::ui::KeyboardDock> dock_;
+    std::unique_ptr<zyg::ui::Toast> toast_;
+    std::unique_ptr<zyg::ui::ModalLayer> modal_;
+    std::uint64_t lastPresetId_ = 0;
+    std::string lastPresetName_;
+    bool firstPatch_ = true;
+    int page_ = 0, prevPage_ = 0;
+    int scale_ = 1;
+    // GPU compositing: JUCE paints every component through this OpenGL context when attached.
+    std::unique_ptr<juce::OpenGLContext> gl_;
+    bool gpu_ = true;
+    void setGpu(bool on);
+    // Loads presets off the message thread so browsing never stalls the UI; the newest request wins.
+    struct PresetLoader;
+    std::unique_ptr<PresetLoader> loader_;
+    int logicalW_ = defaultWidth, logicalH_ = defaultHeight;
+    unsigned seenVersion_ = 0;
+    bool snapshotWritten_ = false;
+    zyg::ui::Fade pageFade_ {nullptr, 14.0f};
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZygEditor)
 };

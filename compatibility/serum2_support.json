@@ -38,38 +38,38 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "OSC A/B/C local RIFF WAVE frames render with pitch, level, pan, absolute/random phase, position, unison and detune. Control-thread FFT mipmaps and cubic interpolation reduce ordinary table aliasing. A typed dual-warp subset now renders Bend/Asym/PWM/Flip, selected nonlinear shapes, and audio-rate FM/RM/AM from main oscillators, SUB or NOISE through a 2x 63-tap FIR path. Many warp IDs, phase-memory modes, advanced unison and higher oversampling remain unsupported."
+      "notes": "OSC A/B/C local RIFF WAVE frames render with pitch, level, pan, absolute/random phase, position, unison and detune. Control-thread FFT mipmaps and cubic interpolation reduce ordinary table aliasing. A typed dual-warp subset now renders Bend/Asym/PWM/Flip, selected nonlinear shapes, and audio-rate FM/RM/AM from main oscillators, SUB or NOISE through a 2x 63-tap FIR path. Many warp IDs, phase-memory modes, advanced unison and higher oversampling remain unsupported. 2026-09-27: embedded editor tables (embeddedWTData, e.g. 'Custom') keep their tableDisplayName and are now serialized as base64 float32 frames in .zygpreset and host state (previously lost on project reload); round-trip test added. The observed numFrames field is often larger than the embedded data and its meaning is unknown; only the embedded frames are used."
     },
     "sample_oscillator": {
       "researched": "partial",
       "parsed": "complete",
       "mapped": "partial",
-      "implemented": "none",
-      "tested": "none",
+      "implemented": "partial",
+      "tested": "partial",
       "real_preset_verified": false
     },
     "multisample": {
       "researched": "partial",
       "parsed": "complete",
       "mapped": "partial",
-      "implemented": "none",
-      "tested": "none",
+      "implemented": "partial",
+      "tested": "partial",
       "real_preset_verified": false
     },
     "granular": {
       "researched": "partial",
       "parsed": "complete",
       "mapped": "partial",
-      "implemented": "none",
-      "tested": "none",
+      "implemented": "partial",
+      "tested": "partial",
       "real_preset_verified": false
     },
     "spectral": {
       "researched": "partial",
       "parsed": "complete",
       "mapped": "partial",
-      "implemented": "none",
-      "tested": "none",
+      "implemented": "partial",
+      "tested": "partial",
       "real_preset_verified": false
     },
     "sub": {
@@ -79,7 +79,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "Native SUB sine source renders and has enable/level controls. Other Serum SUB shapes/phase/pitch semantics are not implemented; no real active-SUB preset test yet."
+      "notes": "All five observed SUB shape IDs map to typed native pulse, rounded-rectangle, saw, square and triangle waveforms; discontinuous shapes use polyBLEP correction. Enable, octave/coarse pitch, level, pan, phase and routing use the shared oscillator path. Exact Serum waveform identity, continuous-phase behavior, key/velocity zones and a real active-SUB preset render remain open."
     },
     "noise": {
       "researched": "partial",
@@ -97,7 +97,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "Filter 1 uses a ZYG trapezoidal state-variable low-pass with editable cutoff, resonance, drive and wet mix. Serum filter type identities remain preserved but are not semantically reproduced; Filter 2 is not rendered. Cutoff smoothing and finite-response tests exist, but full stability/performance sweeps remain open."
+      "notes": "Filters 1 and 2 use independent ZYG trapezoidal filter state. Typed native Low/High 6/12/18/24 and Band/Notch 12/24 responses use one-pole and SVF stages. MgL6/MgL18/MgL24 use a separate nonlinear four-stage native ladder with resonance feedback and FAT saturation. These fifteen IDs cover 479 of 859 enabled filter instances in the inspected factory corpus. Raw Serum IDs remain preserved and are not read by DSP. Only Filter 1 is editable in the current UI. Other filter families, exact Serum transfer matching, and full stability/performance sweeps remain open."
     },
     "routing": {
       "researched": "partial",
@@ -106,7 +106,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "OSC A/B/C targets Filter 1, Main, Direct or None and these targets are editable. Dual-filter balance and FX sends are retained but not rendered."
+      "notes": "Five source routes now split into two filter inputs using provisional native balance 0=Filter 1, 100=Filter 2. One-way Filter 1-to-2 or 2-to-1 chains and filter output Main/Direct/None render; two-way feedback uses a diagnosed Main fallback. Main and Direct remain identical in the absence of FX; FX sends, global direct level and envelope-gated routing remain unsupported. Exact Serum balance transfer needs controlled verification."
     },
     "envelopes": {
       "researched": "partial",
@@ -115,7 +115,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "Env 1 ADSHR and three native attack/decay/release curve bends render and are tested. Env 2-4, tempo sync, trigger/legato modes and exact Serum curve transfer remain unsupported."
+      "notes": "Env 1 ADSHR and three native attack/decay/release curve bends render, are tested, and Env 1 can drive supported matrix destinations. Env 2-4, tempo sync, trigger/legato modes and exact Serum curve transfer remain unsupported. 2026-09-27: kParamVoiceStealRestart maps to native Envelope.restartOnSteal (off = a stolen/mono-retriggered voice re-attacks from its current level); covered by a core render test. Serum's exact steal semantics are inferred from the parameter name and remain unverified against an oracle."
     },
     "lfo": {
       "researched": "partial",
@@ -133,7 +133,7 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "All populated imported rows remain typed and visible. Supported LFOs and Macro 1-8 execute for OSC A WT position, dual-warp depth, or Filter 1 cutoff. The 2.0.24 fixture verifies imported Lorenz-to-WT-position and Macro 1-to-FM-depth routes. Other sources/destinations, aux, curves and slew remain preserved but unsupported; the current UI editor does not yet offer warp destinations."
+      "notes": "All populated imported rows remain typed and visible. Env 1, velocity, note, supported LFOs and Macro 1-8 execute for OSC A/B/C wavetable position, dual-warp depth, or Filter 1/2 cutoff. The 2.0.24 fixture verifies imported Lorenz-to-WT-position and Macro 1-to-FM-depth routes; synthetic tests cover the new sources and destinations. Env 2-4, other sources/destinations, aux, curves and slew remain preserved but unsupported. 2026-09-27: UI can now create routes to every mapped continuous control (knob/spinner/fader) by drag-and-drop or a right-click source menu over the full catalog; ZYG-only MIDI CC 0-119 source added (engine-rendered, tested). Serum amount/curve/aux scaling is still unverified (see docs/SERUM_ORACLE_HANDOFF.md)."
     },
     "macros": {
       "researched": "partial",
@@ -142,30 +142,30 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "Eight macro values map to normalized native controls; four are visible at once in the first editor. Macro sources 1-8 execute only for OSC A WT position and Filter 1 cutoff destinations. Other imported macro routes remain preserved without DSP."
+      "notes": "Eight macro values map to normalized native controls; four are visible at once in the first editor. Macro sources 1-8 execute for OSC A/B/C wavetable position, both oscillator warp depths and Filter 1/2 cutoff destinations. Other imported macro routes remain preserved without DSP."
     },
     "fx": {
       "researched": "partial",
       "parsed": "complete",
       "mapped": "partial",
-      "implemented": "none",
-      "tested": "none",
+      "implemented": "partial",
+      "tested": "partial",
       "real_preset_verified": false
     },
     "arp": {
       "researched": "partial",
       "parsed": "complete",
       "mapped": "partial",
-      "implemented": "none",
-      "tested": "none",
+      "implemented": "partial",
+      "tested": "partial",
       "real_preset_verified": false
     },
     "clips": {
       "researched": "partial",
       "parsed": "complete",
       "mapped": "partial",
-      "implemented": "none",
-      "tested": "none",
+      "implemented": "partial",
+      "tested": "partial",
       "real_preset_verified": false
     },
     "voice_global": {
@@ -173,8 +173,9 @@
       "parsed": "complete",
       "mapped": "partial",
       "implemented": "partial",
-      "tested": "none",
-      "real_preset_verified": false
+      "tested": "partial",
+      "real_preset_verified": false,
+      "notes": " 2026-09-27: kParamNoteCurveApplyTuning / kParamPitchExpressionApplyTuning are typed; ZYG has no microtuning tables, so they are inert and diagnosed only when on. kParamS1Compatibility is typed and always diagnosed as not rendered (undocumented legacy behaviour)."
     },
     "vst3_host": {
       "researched": "partial",
@@ -222,5 +223,6 @@
   "tested_serum_preset_versions": [
     "2.0.24",
     "2.1.2"
-  ]
+  ],
+  "dsp_note": "2026-09-26: all categories are rendered by original ZYG DSP with provisional scales; 'partial' means not verified against a Serum oracle. See docs/DSP_DECISIONS.md."
 }

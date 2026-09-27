@@ -26,3 +26,6 @@
 __pycache__/
 .pytest_cache/
 *.egg-info/
+
+# Local agent tooling state.
+skills-lock.json

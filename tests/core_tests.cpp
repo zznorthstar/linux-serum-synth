@@ -60,6 +60,122 @@ int main() {
         synth.render(left.data(), right.data(), 0, int(left.size()));
         const auto max = *std::max_element(left.begin(), left.end());
         if (!(max > 0.001f && max < 1.0f)) throw std::runtime_error("init oscillator silent or unstable");
+        {   // embedded tables (no asset path) survive .zygpreset / host-state round trips bit-exactly
+            zyg::Patch e = init;
+            e.originalPreset = {1, 2, 3};            // looks imported, so no sine fallback applies
+            e.oscillators[0].tableName = "Custom";
+            e.oscillators[0].audio.resize(4096);
+            for (int i = 0; i < 4096; ++i) e.oscillators[0].audio[std::size_t(i)] = float(std::sin(0.37 * i) * 0.9 - 1.0e-7 * i);
+            const auto back = zyg::patchFromJson(zyg::Json::parse(zyg::patchToJson(e).dump()));
+            if (back.oscillators[0].audio != e.oscillators[0].audio) throw std::runtime_error("embedded wavetable frames lost in patch JSON");
+            if (back.oscillators[0].tableName != "Custom") throw std::runtime_error("embedded table name lost in patch JSON");
+            if (!back.oscillators[0].wavetableMipmaps) throw std::runtime_error("embedded table mipmaps not rebuilt on restore");
+            zyg::Patch withAsset = e; withAsset.oscillators[0].asset = "S2 Tables/Default Shapes.wav";
+            if (zyg::patchToJson(withAsset)["oscillators"][0].contains("embeddedFrames")) throw std::runtime_error("asset-backed table must stay a reference");
+        }
+        {   // MIDI CC source (ZYG extension): CC 20 -> OSC A level opens a silent oscillator
+            zyg::Patch m = init;
+            m.oscillators[0].volume = 0.0;
+            zyg::ModulationRoute r;
+            r.sourceKind = zyg::ModSource::midiCC; r.sourceIndex = 20;
+            r.targetKind = zyg::ModTarget::oscParam; r.targetIndex = 0; r.targetParam = int(zyg::OscParam::volume);
+            r.amount = 100.0;
+            m.modulation.push_back(r);
+            auto energy = [&](float cc) {
+                zyg::SynthEngine s; s.prepare(48000); s.setPatch(&m);
+                s.setControlChange(1, 20, cc);
+                s.noteOn(1, 60, 1.0f);
+                std::vector<float> l(9600), rr(9600); s.render(l.data(), rr.data(), 0, 9600);
+                double e = 0; for (float x : l) e += double(x) * x; return e;
+            };
+            if (!(energy(1.0f) > 1.0e-3 && energy(0.0f) < 1.0e-9)) throw std::runtime_error("MIDI CC modulation source had no effect");
+            if (zyg::patchFromJson(zyg::Json::parse(zyg::patchToJson(m).dump())).modulation.at(0).sourceKind != zyg::ModSource::midiCC)
+                throw std::runtime_error("MIDI CC source not preserved in patch JSON");
+        }
+        {   // Env restartOnSteal (Serum kParamVoiceStealRestart): mono retrigger continues from the current level when off
+            auto retriggerLevel = [&](bool restart) {
+                zyg::Patch m = init;
+                m.mono = true;
+                m.envelopes[0].attack = 1.0; m.envelopes[0].decay = 1.0; m.envelopes[0].sustain = 1.0;
+                m.envelopes[0].restartOnSteal = restart;
+                zyg::SynthEngine s; s.prepare(48000); s.setPatch(&m);
+                std::vector<float> l(24000), r(24000);
+                s.noteOn(1, 60, 1.0f); s.render(l.data(), r.data(), 0, 24000);   // 0.5 s into a 1 s attack
+                s.noteOn(1, 62, 1.0f);
+                std::vector<float> l2(480), r2(480);
+                s.render(l2.data(), r2.data(), 0, 480);
+                double e = 0; for (int i = 240; i < 480; ++i) e += double(l2[std::size_t(i)]) * l2[std::size_t(i)];
+                return std::sqrt(e / 240.0);
+            };
+            const double restarted = retriggerLevel(true), continued = retriggerLevel(false);
+            if (!(continued > restarted * 4.0 && continued > 1.0e-3))
+                throw std::runtime_error("restartOnSteal=false did not keep the envelope level on retrigger");
+        }
+        const std::array<std::pair<const char*, zyg::FilterResponse>, 15> importedResponses {{
+            {"L6", zyg::FilterResponse::low6}, {"L12", zyg::FilterResponse::low12},
+            {"L18", zyg::FilterResponse::low18}, {"L24", zyg::FilterResponse::low24},
+            {"H6", zyg::FilterResponse::high6}, {"H12", zyg::FilterResponse::high12},
+            {"H18", zyg::FilterResponse::high18}, {"H24", zyg::FilterResponse::high24},
+            {"B12", zyg::FilterResponse::band12}, {"B24", zyg::FilterResponse::band24},
+            {"N12", zyg::FilterResponse::notch12}, {"N24", zyg::FilterResponse::notch24},
+            {"MgL6", zyg::FilterResponse::ladder6}, {"MgL18", zyg::FilterResponse::ladder18},
+            {"MgL24", zyg::FilterResponse::ladder24},
+        }};
+        for (const auto& [id, response] : importedResponses) {
+            zyg::SerumDocument document;
+            document.metadata = {{"presetName", "filter adapter test"}, {"productVersion", "2.0.18"}};
+            document.state["VoiceFilter0"]["plainParams"] = {
+                {"kParamEnable", 1.0}, {"kParamType", id}, {"kParamFreq", 0.5},
+            };
+            const auto imported = zyg::importSerum(document, {});
+            if (imported.filters[0].type != id || imported.filters[0].response != response)
+                throw std::runtime_error("Serum normal-filter ID did not map to typed native response");
+        }
+        const std::array<std::pair<const char*, zyg::SubShape>, 5> importedSubShapes {{
+            {"kPulse", zyg::SubShape::pulse}, {"kRoundRect", zyg::SubShape::roundedRectangle},
+            {"kSaw", zyg::SubShape::saw}, {"kSquare", zyg::SubShape::square},
+            {"kTriangle", zyg::SubShape::triangle},
+        }};
+        for (const auto& [id, shape] : importedSubShapes) {
+            zyg::SerumDocument document;
+            document.state["Oscillator4"]["plainParams"] = {{"kParamEnable", 1.0}};
+            document.state["Oscillator4"]["SubOsc4"]["plainParams"] = {{"kParamShape", id}};
+            const auto imported = zyg::importSerum(document, {});
+            if (imported.oscillators[4].subShape != shape)
+                throw std::runtime_error("Serum SUB shape did not map to typed native waveform");
+        }
+        zyg::Patch subShapePatch;
+        subShapePatch.oscillators[4].enabled = true;
+        subShapePatch.oscillators[4].mode = zyg::OscMode::sub;
+        subShapePatch.routes[4].target = zyg::RouteTarget::main;
+        subShapePatch.envelopes[0].attack = 0;
+        subShapePatch.envelopes[0].hold = 1;
+        std::vector<std::vector<float>> subRenders;
+        for (const auto& [id, shape] : importedSubShapes) {
+            (void) id;
+            subShapePatch.oscillators[4].subShape = shape;
+            subRenders.emplace_back(1024);
+            std::vector<float> other(1024);
+            synth.setPatch(&subShapePatch); synth.allNotesOff(); synth.noteOn(1, 36, 1.0f);
+            synth.render(subRenders.back().data(), other.data(), 0, 1024);
+        }
+        for (std::size_t i = 1; i < subRenders.size(); ++i) {
+            double difference = 0.0;
+            for (std::size_t n = 0; n < subRenders[i].size(); ++n)
+                difference += std::abs(subRenders[i][n] - subRenders[0][n]);
+            if (difference < 1.0) throw std::runtime_error("typed SUB shapes did not render distinctly");
+        }
+        zyg::Patch legacyModSources;
+        for (int source : {2, 16, 17}) {
+            legacyModSources.modulation.push_back({});
+            legacyModSources.modulation.back().source = source;
+        }
+        zyg::mapLegacySerumModulationRoutes(legacyModSources);
+        if (legacyModSources.modulation[0].sourceKind != zyg::ModSource::envelope
+            || legacyModSources.modulation[0].sourceIndex != 0
+            || legacyModSources.modulation[1].sourceKind != zyg::ModSource::velocity
+            || legacyModSources.modulation[2].sourceKind != zyg::ModSource::note)
+            throw std::runtime_error("Serum Env 1/velocity/note sources did not map to typed native sources");
         auto renderAttack = [&](zyg::Patch& patch) {
             std::vector<float> out(256), scratch(256);
             synth.setPatch(&patch); synth.allNotesOff(); synth.noteOn(1, 60, 1.0f);
@@ -308,6 +424,105 @@ int main() {
         if (std::abs(resonantEnergy - plainEnergy) < plainEnergy * 0.05 ||
             std::abs(drivenEnergy - plainEnergy) < plainEnergy * 0.05)
             throw std::runtime_error("filter resonance or drive had no audible DSP effect");
+        // The native patch carries a typed response; the renderer must not
+        // inspect the preserved Serum type string to choose its transfer.
+        auto responsePatch = init;
+        responsePatch.routes[0].target = zyg::RouteTarget::filter;
+        responsePatch.filters[0].enabled = true;
+        responsePatch.filters[0].resonance = 0;
+        responsePatch.filters[0].drive = 0;
+        responsePatch.filters[0].wet = 100;
+        responsePatch.filters[0].type = "deliberately unrelated provenance";
+        responsePatch.filters[0].cutoff = 0.25;
+        responsePatch.filters[0].response = zyg::FilterResponse::low6;
+        const auto low6Energy = filterEnergy(responsePatch);
+        responsePatch.filters[0].response = zyg::FilterResponse::low12;
+        const auto low12Energy = filterEnergy(responsePatch);
+        responsePatch.filters[0].response = zyg::FilterResponse::low18;
+        const auto low18Energy = filterEnergy(responsePatch);
+        responsePatch.filters[0].response = zyg::FilterResponse::low24;
+        const auto low24Energy = filterEnergy(responsePatch);
+        responsePatch.filters[0].response = zyg::FilterResponse::high12;
+        const auto high12Energy = filterEnergy(responsePatch);
+        if (!(low6Energy > low12Energy && low12Energy > low18Energy && low18Energy > low24Energy
+            && high12Energy > low12Energy * 2.0))
+            throw std::runtime_error("typed low/high filter responses or 6/12/18/24 dB slopes did not render distinctly");
+        responsePatch.filters[0].cutoff = std::log(261.625565 / 20.0) / std::log(1000.0);
+        responsePatch.filters[0].response = zyg::FilterResponse::band12;
+        const auto bandEnergy = filterEnergy(responsePatch);
+        responsePatch.filters[0].response = zyg::FilterResponse::notch12;
+        const auto notchEnergy = filterEnergy(responsePatch);
+        if (!(bandEnergy > notchEnergy * 20.0))
+            throw std::runtime_error("typed band/notch filter responses did not render distinctly");
+        responsePatch.filters[0].cutoff = 0.25;
+        responsePatch.filters[0].response = zyg::FilterResponse::ladder6;
+        const auto ladder6Energy = filterEnergy(responsePatch);
+        responsePatch.filters[0].response = zyg::FilterResponse::ladder18;
+        const auto ladder18Energy = filterEnergy(responsePatch);
+        responsePatch.filters[0].response = zyg::FilterResponse::ladder24;
+        const auto ladder24Energy = filterEnergy(responsePatch);
+        responsePatch.filters[0].cutoff = std::log(261.625565 / 20.0) / std::log(1000.0);
+        const auto ladderAtCutoffEnergy = filterEnergy(responsePatch);
+        responsePatch.filters[0].resonance = 75;
+        const auto resonantLadderEnergy = filterEnergy(responsePatch);
+        responsePatch.filters[0].var = 100;
+        const auto fatLadderEnergy = filterEnergy(responsePatch);
+        if (!(ladder6Energy > ladder18Energy && ladder18Energy > ladder24Energy
+            && std::abs(resonantLadderEnergy - ladderAtCutoffEnergy) > ladderAtCutoffEnergy * 0.1
+            && std::abs(fatLadderEnergy - resonantLadderEnergy) > resonantLadderEnergy * 0.01))
+            throw std::runtime_error("MG ladder response check failed: " + std::to_string(ladder6Energy)
+                + ", " + std::to_string(ladder18Energy) + ", " + std::to_string(ladder24Energy)
+                + ", " + std::to_string(ladderAtCutoffEnergy) + ", " + std::to_string(resonantLadderEnergy)
+                + ", " + std::to_string(fatLadderEnergy));
+        for (double cutoff : {0.0, 0.25, 0.5, 0.75, 1.0})
+            for (double resonance : {0.0, 50.0, 100.0})
+                for (double drive : {0.0, 100.0})
+                    for (double fat : {0.0, 100.0}) {
+                        responsePatch.filters[0].cutoff = cutoff;
+                        responsePatch.filters[0].resonance = resonance;
+                        responsePatch.filters[0].drive = drive;
+                        responsePatch.filters[0].var = fat;
+                        (void) filterEnergy(responsePatch);
+                    }
+        // Parallel sends and one-way serial routing must use separate filter
+        // state and honor the two filter-output route slots.
+        auto dualFilter = init;
+        dualFilter.routes[0].target = zyg::RouteTarget::filter;
+        dualFilter.filters[0].enabled = true;
+        dualFilter.filters[0].cutoff = 0.05;
+        dualFilter.filters[0].resonance = 0;
+        dualFilter.filters[1].enabled = true;
+        dualFilter.filters[1].cutoff = 0.8;
+        dualFilter.filters[1].resonance = 0;
+        dualFilter.routes[0].filterBalance = -100;
+        const auto firstFilterEnergy = filterEnergy(dualFilter);
+        dualFilter.routes[0].filterBalance = 100;
+        const auto secondFilterEnergy = filterEnergy(dualFilter);
+        if (!(secondFilterEnergy > firstFilterEnergy * 20.0))
+            throw std::runtime_error("Filter 2 routing or independent cutoff had no DSP effect");
+        dualFilter.routes[0].filterBalance = 0;
+        const auto parallelEnergy = filterEnergy(dualFilter);
+        if (!(parallelEnergy > firstFilterEnergy && parallelEnergy < secondFilterEnergy))
+            throw std::runtime_error("filter balance did not blend the parallel paths");
+        dualFilter.routes[0].filterBalance = -100;
+        dualFilter.filters[0].cutoff = 0.8;
+        dualFilter.filters[1].cutoff = 0.05;
+        const auto beforeSerialEnergy = filterEnergy(dualFilter);
+        dualFilter.routes[5].target = zyg::RouteTarget::filter;
+        const auto serialEnergy = filterEnergy(dualFilter);
+        if (!(serialEnergy < beforeSerialEnergy * 0.1))
+            throw std::runtime_error("Filter 1 to Filter 2 serial edge had no DSP effect");
+        dualFilter.routes[5].target = zyg::RouteTarget::main;
+        dualFilter.routes[0].filterBalance = 100;
+        dualFilter.filters[0].cutoff = 0.05;
+        dualFilter.filters[1].cutoff = 0.8;
+        const auto beforeReverseEnergy = filterEnergy(dualFilter);
+        dualFilter.routes[6].target = zyg::RouteTarget::filter;
+        if (!(filterEnergy(dualFilter) < beforeReverseEnergy * 0.1))
+            throw std::runtime_error("Filter 2 to Filter 1 serial edge had no DSP effect");
+        dualFilter.routes[6].target = zyg::RouteTarget::none;
+        if (filterEnergy(dualFilter) > 1e-12)
+            throw std::runtime_error("Filter 2 None output still reached the main output");
         synth.noteOff(1, 60);
         std::fill(left.begin(), left.end(), 0);
         std::fill(right.begin(), right.end(), 0);
@@ -360,6 +575,55 @@ int main() {
         for(float sample:left) macroEnergy += sample*sample;
         if(!(macroEnergy < referenceEnergy*0.01))
             throw std::runtime_error("Macro 1 to WT position route did not affect audio");
+
+        auto sourcePatch = moving;
+        sourcePatch.oscillators[1] = sourcePatch.oscillators[0];
+        sourcePatch.oscillators[0].enabled = false;
+        sourcePatch.routes[0].target = zyg::RouteTarget::none;
+        sourcePatch.routes[1].target = zyg::RouteTarget::main;
+        sourcePatch.modulation[0].targetIndex = 1;
+        auto sourceEnergy = [&](zyg::Patch& patch, int note, float velocity) {
+            synth.setPatch(&patch); synth.allNotesOff(); synth.noteOn(1, note, velocity);
+            std::fill(left.begin(), left.end(), 0);
+            std::fill(right.begin(), right.end(), 0);
+            synth.render(left.data(), right.data(), 0, int(left.size()));
+            double energy = 0.0;
+            for (float sample : left) energy += sample * sample;
+            return energy;
+        };
+        sourcePatch.modulation[0].sourceKind = zyg::ModSource::velocity;
+        sourcePatch.modulation[0].sourceIndex = 0;
+        const auto lowVelocityEnergy = sourceEnergy(sourcePatch, 60, 0.25f);
+        const auto highVelocityEnergy = sourceEnergy(sourcePatch, 60, 1.0f);
+        if (!(lowVelocityEnergy > 0.01 && highVelocityEnergy < lowVelocityEnergy * 0.01))
+            throw std::runtime_error("velocity source or OSC B wavetable-position destination did not render");
+        sourcePatch.modulation[0].sourceKind = zyg::ModSource::envelope;
+        sourcePatch.modulation[0].sourceIndex = 0;
+        sourcePatch.envelopes[0].attack = 0.1;
+        const auto envelopeRoutedEnergy = sourceEnergy(sourcePatch, 60, 1.0f);
+        auto noEnvelopeRoute = sourcePatch;
+        noEnvelopeRoute.modulation.clear();
+        const auto envelopeReferenceEnergy = sourceEnergy(noEnvelopeRoute, 60, 1.0f);
+        if (!(envelopeRoutedEnergy < envelopeReferenceEnergy * 0.1))
+            throw std::runtime_error("Env 1 source did not modulate OSC B wavetable position");
+
+        auto filterTwoMod = dualFilter;
+        filterTwoMod.routes[0].filterBalance = 100;
+        filterTwoMod.routes[5].target = zyg::RouteTarget::main;
+        filterTwoMod.routes[6].target = zyg::RouteTarget::main;
+        filterTwoMod.filters[1].cutoff = 0.05;
+        filterTwoMod.modulation.clear();
+        zyg::ModulationRoute filterTwoRoute;
+        filterTwoRoute.sourceKind = zyg::ModSource::note;
+        filterTwoRoute.targetKind = zyg::ModTarget::filterCutoff;
+        filterTwoRoute.targetIndex = 1;
+        filterTwoRoute.amount = 100;
+        filterTwoMod.modulation.push_back(filterTwoRoute);
+        const auto noteOpenedEnergy = sourceEnergy(filterTwoMod, 100, 1.0f);
+        filterTwoMod.modulation.clear();
+        const auto closedFilterTwoEnergy = sourceEnergy(filterTwoMod, 100, 1.0f);
+        if (!(noteOpenedEnergy > closedFilterTwoEnergy * 20.0))
+            throw std::runtime_error("note source or Filter 2 cutoff destination did not render");
 
         auto chaosMoving = moving;
         chaosMoving.modulation[0].sourceKind = zyg::ModSource::lfo;
@@ -469,7 +733,10 @@ int main() {
             original.oscillators[0].warpDefinitions[0] = {zyg::WarpMode::frequencyMod, 1};
             original.oscillators[0].warpOne = "native frequency modulation";
             original.oscillators[0].modeState = zyg::Json{{"plainParams", zyg::Json{{"kParamWarpMenu", "kFM_OSC"}}}};
+            original.oscillators[4].mode = zyg::OscMode::sub;
+            original.oscillators[4].subShape = zyg::SubShape::saw;
             original.filters[0].enabled = true;
+            original.filters[0].response = zyg::FilterResponse::ladder24;
             original.filters[0].cutoff = 0.33;
             original.routes[0].target = zyg::RouteTarget::direct;
             original.envelopes[0].attack = 0.02;
@@ -485,9 +752,10 @@ int main() {
             original.modulation[0].targetKind = zyg::ModTarget::wavetablePosition;
             original.modulation[0].amount = 45;
             original.modulation.push_back({});
+            original.modulation[1].sourceKind = zyg::ModSource::velocity;
             original.modulation[1].targetKind = zyg::ModTarget::warpOneAmount;
             original.modulation[1].targetIndex = 0;
-            original.fx.push_back({"FXDelay", 0, 0, true, zyg::Json{{"wet", 20}}, {}});
+            { zyg::FxModule delayModule; delayModule.type = "FXDelay"; delayModule.parameters = zyg::Json{{"wet", 20}}; original.fx.push_back(delayModule); }
             original.unknownSerumState = zyg::Json{{"unknown", zyg::Json{{"exact", 123}}}};
             original.originalPreset = {0, 1, 255};
             original.diagnostics.push_back({"FXRack0", "not_rendered", "effect retained"});
@@ -496,10 +764,12 @@ int main() {
             if (restored.modulation.size() != 2 || restored.modulation[0].amount != 45 ||
                 restored.modulation[0].sourceKind != zyg::ModSource::lfo ||
                 restored.modulation[0].targetKind != zyg::ModTarget::wavetablePosition ||
+                restored.modulation[1].sourceKind != zyg::ModSource::velocity ||
                 restored.modulation[1].targetKind != zyg::ModTarget::warpOneAmount ||
                 restored.fx.size() != 1 || restored.lfoOneRateHz != 2.5 || restored.macroValues[0] != 0.75 ||
                 restored.lfoDefinitions[0].shape != zyg::LfoShape::lorenz
                 || restored.lfoDefinitions[0].rateHz != 0.75 ||
+                restored.oscillators[4].subShape != zyg::SubShape::saw ||
                 restored.unknownSerumState != original.unknownSerumState ||
                 restored.originalPreset != original.originalPreset || restored.diagnostics.size() != 1)
                 throw std::runtime_error(".zygpreset round trip lost modulation, FX or Serum provenance");
@@ -530,7 +800,8 @@ int main() {
             if (osc.warpDefinitions[0].mode != zyg::WarpMode::frequencyMod
                 || osc.warpDefinitions[0].sourceIndex != 1)
                 throw std::runtime_error(".zygpreset round trip lost native warp definition");
-            if (!restored.filters[0].enabled || std::abs(restored.filters[0].cutoff - original.filters[0].cutoff) > 1e-9)
+            if (!restored.filters[0].enabled || restored.filters[0].response != zyg::FilterResponse::ladder24
+                || std::abs(restored.filters[0].cutoff - original.filters[0].cutoff) > 1e-9)
                 throw std::runtime_error(".zygpreset round trip lost filter fields");
             if (restored.routes[0].target != zyg::RouteTarget::direct)
                 throw std::runtime_error(".zygpreset round trip lost route target");

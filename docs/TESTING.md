@@ -67,3 +67,40 @@ After rebuilding and SHA-256 matching the installed copies to the build outputs,
 The core test checks oscillator phase randomization, curved envelope onset, wavetable mip-cache geometry, more than 20 dB suppression of a known high-note saw foldback bin, 2× FIR pass/stop bounds, oversampled/dry phase alignment, zero-level oscillator FM, render-order-independent audio-rate source timing, Macro→warp depth, stable dual hard-clip/sine-fold processing, typed-route independence from raw Serum labels, native sine/macro/Lorenz modulation, finite filter extremes and native state round-trip of LFO/warp definitions. Current private fixture runs report 2.1.2 at `57/83` typed with finite peak `0.0548913`, and 2.0.24 at `43/75` typed with finite peak `-0.259292`. The large remaining diagnostic counts are retained gaps, not passing compatibility results.
 
 After the final render-order timing fix, the rebuilt VST3 (`284d06ea6756af7102b4a07ca18eb36502db57a313c369d5b76b16b1587bf228`) and CLAP (`9a2dd16e1b251cdb190cd92fe91f4de84ff8fcdab633da42852738024d2aaa3e`) were installed with hashes exactly matching their build outputs. A new separate REAPER VST3 process loaded the private 2.0.24 fixture via the environment-gated developer hook. The disposable armed/monitored track ran realtime MIDI transport and reported `play_polls=59`, `max_position=1.877333`, `track_peak=0.002166748`, `master_peak=0.114783958`. The process was terminated after the script. This proves the exact rebuilt VST3 remains realtime-active with the fixture and its imported Macro 1 → FM-depth route; it does not validate subjective similarity, every route, tempo sync, CLAP realtime for this exact code change, or speaker audibility.
+
+
+## DSP suite and corpus rendering (2026-09-26)
+
+`build/zygzxg_dsp_tests` (58 tests) covers filters, all FX, envelope/LFO/point buses, unison, pitch, wavetable position, sample/multisample/granular/spectral/noise/warps/SUB/oversampling/slicing, matrix routing and viaEnv, buses, portamento/mono/sustain/bend, velocity, zones, arp, clip player, importer maps, SFZ, JSON round-trip, extreme-patch finiteness, and zero allocation on the audio path with every module active. Run via `ctest --test-dir build`.
+
+Corpus method: `zygzxg_render preset.SerumPreset --note 48 --vel 0.8 --seconds 3 --nolimit` over all factory presets (assets resolved from `.local-serum-content`). Result: all 621 renderable presets finite; peak dBFS percentiles 5% −28, 50% −13, 95% +3 (limiter off). Silent outputs were investigated; the remainder are legitimate (e.g. a kit whose keys start above the test note). This is an objective sanity/level check only, not a similarity test against Serum.
+
+
+## UI (2026-09-26)
+
+- `ctest` now also runs `ui_model_tests` (FX rack add/remove/move, splitter band counts, modulation re-indexing).
+- Visual checks: `build/zygzxg_ui_snapshot_artefacts/Release/zygzxg_ui_snapshot --editor out.png --preset SO_IS_bass_press.SerumPreset --size 1280x720 --page 2` (needs an X display, e.g. `DISPLAY=:1`). Pages: 0 OSC, 1 MIX, 2 FX, 3 MATRIX, 4 GLOBAL. `--modal browser --wait 1500` shows the preset browser after its scan; `--live 900 --play` drives the engine with a held note so the reactive animations are captured.
+- Not covered by automation: real pointer/keyboard interaction inside a plugin host.
+
+## Editor in REAPER (2026-09-26)
+A disposable `reaper -newinst tests/reaper_gui.lua` instance loaded the private 2.0.24 preset; input was injected with XTest (`XTestFakeMotionEvent/ButtonEvent/KeyEvent`) and inspected via root-window screenshots. Results: page tabs, browser open/search/Enter-to-load (`BA - FM Wobble` factory preset loaded with its assets from `~/.local/share/ZYG-ZXG/Content`), knob keyboard entry ("50" + Return -> 50%), and dragging LFO 1 onto Reverb WIDTH (route created, badge 1->2, toast, LFO chip drag image) all worked. Before the modal-overlay fix none of the clicks reached any widget. Realtime transport tests with the final binaries (VST3 sha256 `b246c8d3...`, CLAP `c691d38b...`, installed copies matching): VST3 `play_polls=58`, `master_peak=0.9994`; CLAP `play_polls=59`, `master_peak=0.9985` with the loud FM Wobble preset (the soft limiter is at its ceiling). Not verified: audible LFO->cutoff by ear, host resize, 44.1/96 kHz, automation, project reload of edited state.
+
+## UI legibility/proportion pass and GPU renderer (2026-09-27)
+
+- `ctest`: 5/5 pass, including new core tests for embedded-wavetable JSON round trip (frames bit-exact, mipmaps rebuilt, asset-backed tables stay references) and Env `restartOnSteal` on mono retrigger.
+- Offline import/render (`zygzxg_render ... --info`) of the 11 user presets in the repo root: all finite; remaining notes are `Env BeatSync` (69 factory presets, semantics unverified) and `kParamS1Compatibility`.
+- Snapshots of all pages at 1280x720 and the OSC page at 1000x600, idle and with a held note (`--live 900 --play`).
+- REAPER 7.80 (X11, disposable `-newinst` instance, VST3 installed by atomic rename so the user's running REAPER kept its mapped binary): editor opened at exactly 1280x720 with a nested JUCE OpenGL child window (GPU path active); an XTest click on the on-screen keyboard played a note and the live WT frame, spectrum, envelope playhead and LFO cursor animated. Not verified: CLAP editor under GL, host resize under GL, other GPU drivers/Wayland, listening checks.
+
+## Modulation / FX / preset browser pass (2026-09-27)
+- `ctest` 6/6 (new `library_tests`: folder layout + readmes never overwritten, Serum and ZYG presets listed equally as user presets, type classification; new core test: MIDI CC source modulates OSC level and survives JSON).
+- REAPER 7.80 disposable instance, XTest: right-click CUTOFF > MOD SOURCE > LFOS > LFO 2 created a route (LFO 2 tab badge 1, ring on the knob); dragging the MW chip onto OSC A FIN created a route (violet bar, MW chip lit); FX page EQ toggled off shows OFF with a dark LED (re-verified in a fresh instance with the final binary); preset browser stayed open while a click and a Down key loaded two presets (toast + top bar updated); logo click opened ABOUT. Not verified: CLAP, sound while auditioning with a running DAW loop (engine keeps voices across patch swaps by design), wavetable browser USER folder listing in-host.
+
+## Browser crash, retro screens (2026-09-27)
+- Reproduced the REAPER crash under `gdb -batch -ex run -ex "thread apply all bt" --args reaper -newinst tests/reaper_gui.lua` via preset dropdown > BROWSE ALL PRESETS: SIGSEGV in `presetTypeOf` on the scan thread (dangling initializer_list). After the fix both BROWSE ALL and USER PRESETS open in REAPER; USER shows an explicit "no user presets yet" message with the folder path.
+- AddressSanitizer build of `zygzxg_ui_snapshot` (RelWithDebInfo, `-fsanitize=address`, leaks off): `--selftest-library`, `--selftest-routes`, browser modal with a completed 628-preset scan, OSC page with a held note, MIX/FX/MATRIX/GLOBAL pages: no errors. The ASan build dir was removed afterwards.
+- `ctest` 6/6. REAPER CPU (whole process, editor open, 2 s `top` samples): idle ~37 % retro on = retro off; holding a note ~66 % retro on vs ~57 % off (after 30 fps + idle skipping + loop optimisation; before: idle 71-77 %).
+
+## v0.1.0-beta checks (2026-09-27)
+- `ctest` 6/6, also with `DISPLAY`/`WAYLAND_DISPLAY` unset (CI-like headless run).
+- REAPER disposable instance: DS_AC2 reese shows flat single cycles for its 7-frame Basic Shapes oscillators and the 3D mesh for PWM Juno (112 frames); browser BASS filter -> pick "808 - Simple Electro" -> DONE -> top-bar next arrow loaded "808 - Straight"; reopening restored the BASS filter with Straight selected. Idle process CPU with the editor open ~44 % of one core (steady 30 fps screens).

@@ -35,6 +35,8 @@ jobs:
           cp -a build/ZYGZXG_artefacts/Release/VST3/ZYG-ZXG.vst3 dist/ZYG-ZXG-linux-x86_64/
           cp -a build/ZYGZXG_artefacts/Release/CLAP/ZYG-ZXG.clap dist/ZYG-ZXG-linux-x86_64/
           cp docs/INSTALL_LINUX.md dist/ZYG-ZXG-linux-x86_64/INSTALL.md
+          mkdir -p dist/ZYG-ZXG-linux-x86_64/presets
+          cp presets/*.zygpreset dist/ZYG-ZXG-linux-x86_64/presets/
           cp LICENSE dist/ZYG-ZXG-linux-x86_64/LICENSE.txt
           cp docs/THIRD_PARTY.md dist/ZYG-ZXG-linux-x86_64/THIRD_PARTY.md
           mkdir -p dist/ZYG-ZXG-linux-x86_64/licenses
@@ -48,7 +50,7 @@ jobs:
         with:
           name: ZYG-ZXG-linux-x86_64
           path: dist/ZYG-ZXG-linux-x86_64.tar.gz
-      - name: Attach to alpha release
+      - name: Attach to prerelease
         if: github.event_name == 'release' && github.event.release.prerelease
         env:
           GH_TOKEN: ${{ github.token }}
