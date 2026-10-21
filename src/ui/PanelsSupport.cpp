@@ -85,7 +85,7 @@ juce::String filterDisplayName(const Filter& f) {
 }
 
 double filterMagnitudeDb(const Filter& f, double hz) {
-    const double fc = 20.0 * std::pow(1000.0, std::clamp(f.cutoff, 0.0, 1.0));
+    const double fc = filterCutoffHz(f, f.cutoff);
     const double w = hz / fc;
     const double reso = std::clamp(f.resonance / 100.0, 0.0, 1.0);
     const double var = std::clamp(f.var / 100.0, 0.0, 1.0);

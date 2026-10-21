@@ -4,6 +4,11 @@
 /*.png
 /Xfer.Records.Serum.v2.1.5/
 /.local-serum-content/
+/oracle-private/
+/migration-snapshots/
+/Serum 2 Presets/
+/Serum2.vst3/
+*.base64
 *.SerumPreset
 *.fxp
 *.exe

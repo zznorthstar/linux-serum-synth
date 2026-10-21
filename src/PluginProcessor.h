@@ -2,6 +2,8 @@
 #include <JuceHeader.h>
 #include "SerumImporter.h"
 #include "SynthEngine.h"
+#include "HostParameters.h"
+#include "PatchExchange.h"
 #include <array>
 #include <atomic>
 #include <memory>
@@ -29,6 +31,7 @@ public:
     void changeProgramName(int, const juce::String&) override {}
     void getStateInformation(juce::MemoryBlock&) override;
     void setStateInformation(const void*, int) override;
+    juce::AudioProcessorValueTreeState& parameters() noexcept { return hostParameters.state; }
 
     bool loadPreset(const juce::File& file);
     bool setAssetRoot(const juce::File& root);
@@ -47,6 +50,7 @@ public:
     std::shared_ptr<const zyg::Patch> getPatch() const;
     bool editPatch(const std::function<void(zyg::Patch&)>& edit);
     float getOutputPeak() const noexcept { return outputPeak.load(std::memory_order_relaxed); }
+    double getHostBpm() const noexcept { return lastBpm.load(std::memory_order_relaxed); }
     float getOutputPeakLeft() const noexcept { return peakLeft.load(std::memory_order_relaxed); }
     float getOutputPeakRight() const noexcept { return peakRight.load(std::memory_order_relaxed); }
     // Copies the newest `n` (<= 8192) mono output samples, oldest first. Message thread only.
@@ -101,11 +105,12 @@ private:
     std::atomic<double> lastBpm {120.0};
     juce::String rsMessage;
     bool publish(zyg::Patch&& patch);
+    static std::shared_ptr<const zyg::Patch> makeInitialPatch();
     zyg::Patch currentPatchCopy() const;
     void setStatus(juce::String text);
     zyg::SynthEngine engine;
-    std::array<std::shared_ptr<zyg::Patch>, 3> slots;
-    std::atomic<int> activeIndex {0}, requestedIndex {0};
+    HostParameters hostParameters {*this};
+    zyg::PatchExchange patchExchange {makeInitialPatch()};
     mutable juce::CriticalSection controlLock;
     juce::String assetRoot, status;
     juce::MemoryBlock savedPreset;

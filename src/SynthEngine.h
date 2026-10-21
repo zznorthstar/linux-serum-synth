@@ -1,5 +1,6 @@
 #pragma once
 #include "Patch.h"
+#include "HostControls.h"
 #include <memory>
 
 namespace zyg {
@@ -14,6 +15,10 @@ public:
 
     void prepare(double sampleRate);
     void setPatch(const Patch* patch) noexcept;
+    // Audio-thread only. Stream lifetime must cover the following render call;
+    // firstSample uses the same coordinates as render(), including MIDI splits.
+    void setHostControlBlock(const HostControlStreams&, int firstSample, int count) noexcept;
+    void clearHostControls() noexcept;
     void noteOn(int channel, int note, float velocity) noexcept;
     void noteOff(int channel, int note, float releaseVelocity = 0.0f) noexcept;
     void allNotesOff() noexcept;

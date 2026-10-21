@@ -1,0 +1,291 @@
+{
+  "reference": "Serum 2.1.5 VST3 on Windows",
+  "observed_date": "2026-10-18",
+  "evidence": "Declared defaultPlainValues from normal host controller state. These are observed controller values, not universally serialized plain units or calibrated transfer functions. FXComp deadband entries are normalized; physical sparse defaults are7/11.6/5.3dB, verified separately by normal accepted state/audio. See docs/COMPRESSOR_CONTROLS.md.",
+  "modules": {
+    "FXDistortion": {
+      "type": 0,
+      "defaults": {
+        "kParamBW": 1.95,
+        "kParamDrive": 25.0,
+        "kParamEnable": 1.0,
+        "kParamFreq": 425.01198472693216,
+        "kParamKeyTrack": 0.0,
+        "kParamLPHP": 0.0,
+        "kParamLevelOut": 0.5,
+        "kParamMode": 0.0,
+        "kParamNumStages": 1.0,
+        "kParamPrePost": 0.0,
+        "kParamWet": 100.0
+      }
+    },
+    "FXFlanger": {
+      "type": 1,
+      "defaults": {
+        "kParamBeatSync": 0.0,
+        "kParamDepth": 100.0,
+        "kParamEnable": 1.0,
+        "kParamFeedback": 50.0,
+        "kParamLevelOut": 0.5,
+        "kParamRate": 0.078125,
+        "kParamSwing": 0.0,
+        "kParamWet": 100.0,
+        "kParamWidth": 180.0
+      }
+    },
+    "FXPhaser": {
+      "type": 2,
+      "defaults": {
+        "kParamBeatSync": 0.0,
+        "kParamDepth": 50.0,
+        "kParamDepth2": 0.5,
+        "kParamEnable": 1.0,
+        "kParamFeedback": 80.0,
+        "kParamFreq": 600.0,
+        "kParamLevelOut": 0.5,
+        "kParamNumPoles": 4.0,
+        "kParamRate": 0.078125,
+        "kParamSwing": 0.0,
+        "kParamWet": 100.0,
+        "kParamWidth": 180.0
+      }
+    },
+    "FXChorus": {
+      "type": 3,
+      "defaults": {
+        "kParamBeatSync": 0.0,
+        "kParamDelay": 5.0,
+        "kParamDelay2": 0.0,
+        "kParamDepth": 26.0,
+        "kParamEnable": 1.0,
+        "kParamFeedback": 9.5,
+        "kParamFilt": 1000.0,
+        "kParamFiltMode": 0.0,
+        "kParamLevelOut": 0.5,
+        "kParamRate": 0.078125,
+        "kParamSwing": 0.0,
+        "kParamWet": 50.0
+      }
+    },
+    "FXDelay": {
+      "type": 4,
+      "defaults": {
+        "kParamBW": 6.75,
+        "kParamBeatSync": 1.0,
+        "kParamEnable": 1.0,
+        "kParamFeedback": 40.0,
+        "kParamFreq": 848.5281374238571,
+        "kParamHQ": 1.0,
+        "kParamLevelOut": 0.5,
+        "kParamLink": 0.0,
+        "kParamMode": 0.0,
+        "kParamOffsetL": 1.0,
+        "kParamOffsetR": 1.0,
+        "kParamTimeL": 0.0772939453125,
+        "kParamTimeR": 0.0772939453125,
+        "kParamWet": 30.0
+      }
+    },
+    "FXComp": {
+      "type": 5,
+      "defaults": {
+        "kParamAttack": 90.09100000135601,
+        "kParamBypassDown1": 0.0,
+        "kParamBypassDown2": 0.0,
+        "kParamBypassDown3": 0.0,
+        "kParamBypassUp1": 0.0,
+        "kParamBypassUp2": 0.0,
+        "kParamBypassUp3": 0.0,
+        "kParamCompensatedWetDry": 1.0,
+        "kParamDeadband0": 0.19047619047619047,
+        "kParamDeadband1": 0.4095238095238095,
+        "kParamDeadband2": 0.10952380952380951,
+        "kParamEnable": 1.0,
+        "kParamGain0": 0.0,
+        "kParamGain1": 0.0,
+        "kParamGain2": 0.0,
+        "kParamLevelOut": 0.5,
+        "kParamLimiterLatencyComp": 0.0,
+        "kParamMakeup": 1.0,
+        "kParamMultiband": 0.0,
+        "kParamRatio": 3.9999880000359997,
+        "kParamRatio0": 1.0,
+        "kParamRatio1": 1.0,
+        "kParamRatio2": 1.0,
+        "kParamRatioBelow": 0.0,
+        "kParamRatioBelow0": 1.0,
+        "kParamRatioBelow1": 1.0,
+        "kParamRatioBelow2": 1.0,
+        "kParamRelease": 90.09100000135601,
+        "kParamThresh": 0.5,
+        "kParamThreshUD0": 100.0,
+        "kParamThreshUD1": 100.0,
+        "kParamThreshUD2": 100.0,
+        "kParamWet": 100.0,
+        "kParamXoverHi": 2500.000000411874,
+        "kParamXoverLow": 128.29653151726313
+      }
+    },
+    "FXReverb": {
+      "type": 6,
+      "defaults": {
+        "kParamDelay": 30.624999999999996,
+        "kParamEnable": 1.0,
+        "kParamFeedback": 25.0,
+        "kParamFreq": 0.0,
+        "kParamFreqB": 35.0,
+        "kParamFreqC": 70.0,
+        "kParamLevelOut": 0.5,
+        "kParamMode": 70.0,
+        "kParamPreDelay": 0.0,
+        "kParamPreDelayBeatSync": 0.0,
+        "kParamSize": 35.0,
+        "kParamType": 0.0,
+        "kParamVintageScale": 70.0,
+        "kParamVintageScaleB": 70.0,
+        "kParamWet": 20.0,
+        "kParamWidth": 20.0
+      }
+    },
+    "FXEQ": {
+      "type": 7,
+      "defaults": {
+        "kParamEnable": 1.0,
+        "kParamFreq1": 209.616962917974,
+        "kParamFreq2": 2040.5359441367445,
+        "kParamGain1": 0.0,
+        "kParamGain2": 0.0,
+        "kParamLevelOut": 0.5,
+        "kParamReso1": 60.0,
+        "kParamReso2": 60.0,
+        "kParamType1": 0.0,
+        "kParamType2": 0.0
+      }
+    },
+    "FXFilter": {
+      "type": 8,
+      "defaults": {
+        "kParamDrive": 0.0,
+        "kParamEnable": 1.0,
+        "kParamFreq": 425.01198472693216,
+        "kParamKeyTrack": 0.0,
+        "kParamLevelOut": 0.5,
+        "kParamPad": 0.0,
+        "kParamReso": 0.0,
+        "kParamStereo": 50.0,
+        "kParamType": 0.0,
+        "kParamVar": 0.0,
+        "kParamWet": 100.0,
+        "kParamX": 0.0,
+        "kParamY": 0.0
+      }
+    },
+    "FXHyperD": {
+      "type": 9,
+      "defaults": {
+        "kParamDetune": 25.0,
+        "kParamDimELevelOut": 0.5,
+        "kParamDimESize": 50.0,
+        "kParamDimEWet": 0.0,
+        "kParamEnable": 1.0,
+        "kParamLevelOut": 0.5,
+        "kParamRate": 40.0,
+        "kParamRetrig": 0.0,
+        "kParamUnison": 4.0,
+        "kParamWet": 50.0
+      }
+    },
+    "FXBode": {
+      "type": 10,
+      "defaults": {
+        "kParamBeatSync": 0.0,
+        "kParamBlur": 0.0,
+        "kParamDelayBalance": 0.0,
+        "kParamDelayTime": 0.0005,
+        "kParamEnable": 1.0,
+        "kParamFeedback": 0.0,
+        "kParamLevelOut": 0.5,
+        "kParamMonoInput": 0.0,
+        "kParamOutputMix": 0.0,
+        "kParamOutputWidth": 100.0,
+        "kParamRange": 22.360679774997898,
+        "kParamRetrig": 0.0,
+        "kParamShift": 0.0,
+        "kParamSwapAB": 0.0,
+        "kParamWet": 100.0
+      }
+    },
+    "FXConv": {
+      "type": 11,
+      "defaults": {
+        "kParamAttack": 0.0,
+        "kParamDamping": 0.0,
+        "kParamDecay": 40.0,
+        "kParamEnable": 1.0,
+        "kParamIpTrim": -18.0,
+        "kParamLevelOut": 0.5,
+        "kParamMinPhase": 0.0,
+        "kParamPredelay": 0.0,
+        "kParamPredelayBeatSync": 0.0,
+        "kParamSize": 100.0,
+        "kParamTone": 0.0,
+        "kParamWet": 20.0
+      }
+    },
+    "FXUtils": {
+      "type": 12,
+      "defaults": {
+        "kParamBalance": 0.0,
+        "kParamEnable": 1.0,
+        "kParamHPF": 1.0,
+        "kParamLFMono": 0.0,
+        "kParamLFXover": 90.0,
+        "kParamLPF": 20000.0,
+        "kParamLevelOut": 0.5,
+        "kParamPolarityL": 0.0,
+        "kParamPolarityR": 0.0,
+        "kParamWet": 100.0,
+        "kParamWidth": 100.0
+      }
+    },
+    "FXSplit": {
+      "type": 13,
+      "defaults": {
+        "kParamBand1Bypass": 0.0,
+        "kParamBand2Bypass": 0.0,
+        "kParamEnable": 1.0,
+        "kParamFreq": 209.616962917974,
+        "kParamModuleCount1": 0.0,
+        "kParamModuleCount2": 0.0,
+        "kParamSolo": -1.0
+      }
+    },
+    "FXSplit3": {
+      "type": 14,
+      "defaults": {
+        "kParamBand1Bypass": 0.0,
+        "kParamBand2Bypass": 0.0,
+        "kParamBand3Bypass": 0.0,
+        "kParamEnable": 1.0,
+        "kParamFreq": 209.616962917974,
+        "kParamFreq2": 1000.0000336628026,
+        "kParamModuleCount1": 0.0,
+        "kParamModuleCount2": 0.0,
+        "kParamModuleCount3": 0.0,
+        "kParamSolo": -1.0
+      }
+    },
+    "FXSplitMS": {
+      "type": 15,
+      "defaults": {
+        "kParamBand1Bypass": 0.0,
+        "kParamBand2Bypass": 0.0,
+        "kParamEnable": 1.0,
+        "kParamModuleCount1": 0.0,
+        "kParamModuleCount2": 0.0,
+        "kParamSolo": -1.0
+      }
+    }
+  },
+  "domain_note": "Defaults may be controller/display values rather than the units stored in processor presets. Conversion must be verified per field; this is evidence, not an adapter lookup table."
+}

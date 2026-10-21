@@ -34,8 +34,8 @@ const char* shapeName(LfoShape s) {
         default: return "OFF";
     }
 }
-constexpr double kDivisions[10] = {32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125, 0.0625};
-const char* kDivisionNames[10] = {"8 BAR", "4 BAR", "2 BAR", "1 BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64"};
+constexpr double kDivisions[15] = {128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125};
+const char* kDivisionNames[15] = {"32 BAR", "16 BAR", "8 BAR", "4 BAR", "2 BAR", "1 BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64", "1/128", "1/256", "1/512"};
 // syncBeats = division * modifier (1, 2/3 triplet, 3/2 dotted)
 double modifierOf(double beats) {
     const double l = std::log2(std::max(beats, 1.0e-6));
@@ -46,8 +46,8 @@ double modifierOf(double beats) {
 }
 int divisionIndex(double beats) {
     const double base = beats / modifierOf(beats);
-    int best = 5; double bd = 1e9;
-    for (int i = 0; i < 10; ++i) { const double d = std::abs(std::log2(base / kDivisions[i])); if (d < bd) { bd = d; best = i; } }
+    int best = 7; double bd = 1e9;
+    for (int i = 0; i < 15; ++i) { const double d = std::abs(std::log2(base / kDivisions[i])); if (d < bd) { bd = d; best = i; } }
     return best;
 }
 }
@@ -174,9 +174,9 @@ EnvGraph::Geo EnvGraph::geometry(double forced) const {
 
 juce::Point<int> EnvGraph::curveHandle(const Geo& g, int which) const {
     using dsp::envelopeCurveShape;
-    if (which == 0) return {(g.x0 + g.xA) / 2, g.bottom - int(std::round(envelopeCurveShape(0.5, env_.curve[0]) * (g.bottom - g.top)))};
-    if (which == 1) return {(g.xH + g.xD) / 2, g.top + int(std::round(envelopeCurveShape(0.5, env_.curve[1]) * (g.ySus - g.top)))};
-    const double v = 1.0 - envelopeCurveShape(0.5, env_.curve[2]);
+    if (which == 0) return {(g.x0 + g.xA) / 2, g.bottom - int(std::round(envelopeCurveShape(0.5, env_.curve[0], env_.exponentialCurves) * (g.bottom - g.top)))};
+    if (which == 1) return {(g.xH + g.xD) / 2, g.top + int(std::round(envelopeCurveShape(0.5, env_.curve[1], env_.exponentialCurves) * (g.ySus - g.top)))};
+    const double v = 1.0 - envelopeCurveShape(0.5, env_.curve[2], env_.exponentialCurves);
     return {(g.xS + g.xR) / 2, g.bottom - int(std::round(v * double(g.bottom - g.ySus)))};
 }
 
@@ -214,9 +214,13 @@ void EnvGraph::mouseDrag(const juce::MouseEvent& e) {
             else if (k == 1) sh = double(e.y - g.top) / double(std::max(1, g.ySus - g.top));
             else sh = 1.0 - double(g.bottom - e.y) / double(std::max(1, g.bottom - g.ySus));
             sh = std::clamp(sh, 0.02, 0.98);
-            const double bend = sh > 0.5 ? std::log2(std::log(1.0 - sh) / std::log(0.5)) / 4.0
-                                         : -std::log2(std::log(sh) / std::log(0.5)) / 4.0;
-            env_.curve[std::size_t(k)] = std::clamp(50.0 + bend * 50.0, 0.0, 100.0);
+            if (env_.exponentialCurves) {
+                env_.curve[std::size_t(k)] = 100.0 * (sh <= 0.5 ? std::cbrt(sh / 4.0) : 1.0 - std::cbrt((1.0 - sh) / 4.0));
+            } else {
+                const double bend = sh > 0.5 ? std::log2(std::log(1.0 - sh) / std::log(0.5)) / 4.0
+                                             : -std::log2(std::log(sh) / std::log(0.5)) / 4.0;
+                env_.curve[std::size_t(k)] = std::clamp(50.0 + bend * 50.0, 0.0, 100.0);
+            }
         }
     }
     commit();
@@ -227,6 +231,7 @@ void EnvGraph::tick(double dt) {
     if (held && !wasHeld_) { stage_ = Stage::held; tHeld_ = 0.0; }
     if (!held && wasHeld_ && stage_ == Stage::held) { stage_ = Stage::released; tRel_ = 0.0; }
     wasHeld_ = held;
+    if (env_.tempoSync) dt *= ctx_.proc.getHostBpm() / 60.0;
     if (stage_ == Stage::held) tHeld_ += dt;
     else if (stage_ == Stage::released) { tRel_ += dt; if (tRel_ > env_.release + 0.15) stage_ = Stage::idle; }
 }
@@ -243,17 +248,17 @@ void EnvGraph::paintContent(juce::Graphics& g) {
     for (double t = step; geo.x0 + t * geo.scale < r.getRight() - 4; t += step) {
         const int x = geo.x0 + int(std::round(t * geo.scale));
         for (int y = r.getY() + 2; y < r.getBottom() - 2; y += 3) px(g, x, y, pal::edgeMid);
-        drawText(g, (t < 1.0 ? formatNumber(t * 1000.0, 0) + "MS" : formatNumber(t, 1) + "S"), x + 2, geo.bottom + 1, pal::textMuted);
+        drawText(g, env_.tempoSync ? formatNumber(t, 2) + "B" : (t < 1.0 ? formatNumber(t * 1000.0, 0) + "MS" : formatNumber(t, 1) + "S"), x + 2, geo.bottom + 1, pal::textMuted);
     }
     for (int i = 1; i < 4; ++i) { const int y = geo.top + (geo.bottom - geo.top) * i / 4; for (int x = r.getX() + 2; x < r.getRight() - 2; x += 4) px(g, x, y, pal::edgeDark); }
     // curve
     auto level = [&](int x) -> double {
-        if (x <= geo.xA) { const double t = geo.xA > geo.x0 ? double(x - geo.x0) / double(geo.xA - geo.x0) : 1.0; return envelopeCurveShape(t, env_.curve[0]); }
+        if (x <= geo.xA) { const double t = geo.xA > geo.x0 ? double(x - geo.x0) / double(geo.xA - geo.x0) : 1.0; return envelopeCurveShape(t, env_.curve[0], env_.exponentialCurves); }
         if (x <= geo.xH) return 1.0;
-        if (x <= geo.xD) { const double t = geo.xD > geo.xH ? double(x - geo.xH) / double(geo.xD - geo.xH) : 1.0; return 1.0 + (env_.sustain - 1.0) * envelopeCurveShape(t, env_.curve[1]); }
+        if (x <= geo.xD) { const double t = geo.xD > geo.xH ? double(x - geo.xH) / double(geo.xD - geo.xH) : 1.0; return 1.0 + (env_.sustain - 1.0) * envelopeCurveShape(t, env_.curve[1], env_.exponentialCurves); }
         if (x <= geo.xS) return env_.sustain;
         const double t = geo.xR > geo.xS ? double(x - geo.xS) / double(geo.xR - geo.xS) : 1.0;
-        return env_.sustain * (1.0 - envelopeCurveShape(t, env_.curve[2]));
+        return env_.sustain * (1.0 - envelopeCurveShape(t, env_.curve[2], env_.exponentialCurves));
     };
     const int maxX = std::min(geo.xR, r.getRight() - 4);
     // fill fades from the curve toward the floor so the graph reads as a lit surface, not a flat slab
@@ -306,7 +311,8 @@ EnvPanel::EnvPanel(UiContext& c) : Panel(c) {
         const auto ep = params[i];
         KnobSpec spec; spec.label = labels[i];
         if (ep == EnvParam::sustain) { spec.lo = 0.0; spec.hi = 1.0; spec.def = 1.0; spec.format = [](double v) { return v <= 1.0e-4 ? juce::String("-INF DB") : fmt::db(v); }; }
-        else { spec.lo = 0.0005; spec.hi = 32.0; spec.logScale = true; spec.def = ep == EnvParam::hold ? 0.0005 : ep == EnvParam::attack ? 0.0005 : ep == EnvParam::decay ? 1.0 : 0.075; spec.format = fmt::seconds; }
+        else { spec.lo = 0.0005; spec.hi = 32.0; spec.logScale = true; spec.def = ep == EnvParam::hold ? 0.0005 : ep == EnvParam::attack ? 0.0005 : ep == EnvParam::decay ? 1.0 : 0.075;
+            spec.format = [this](double v) { return env_.tempoSync ? formatNumber(v, 3) + " B" : fmt::seconds(v); }; }
         auto* k = &make<Knob>(ctx, spec,
             [this, ep](const Patch& p) { return std::max(ep == EnvParam::sustain ? 0.0 : 0.0005, getEnv(p.envelopes[std::size_t(ctx.selectedEnv)], ep)); },
             [this, ep](Patch& p, double v) { setEnv(p.envelopes[std::size_t(ctx.selectedEnv)], ep, v <= 0.0006 && ep != EnvParam::sustain ? 0.0 : v); }, 26);
@@ -318,6 +324,7 @@ void EnvPanel::refresh(const Patch& p) {
     static const EnvParam params[5] = {EnvParam::attack, EnvParam::hold, EnvParam::decay, EnvParam::sustain, EnvParam::release};
     for (int i = 0; i < 5; ++i) knobs_[std::size_t(i)]->setTarget({ModTarget::envParam, ctx.selectedEnv, int(params[i])});
     env_ = p.envelopes[std::size_t(ctx.selectedEnv)];
+    for (int i : {0, 1, 2, 4}) knobs_[std::size_t(i)]->setRange(0.0005, env_.tempoSync ? 128.0 : 32.0);
     Panel::refresh(p);
     repaint();
 }
@@ -339,8 +346,9 @@ void EnvPanel::paint(juce::Graphics& g) {
     drawIconCentred(g, Icon::search, {2, 52, 14, 10}, pal::textMuted);
     drawIconCentred(g, Icon::caretDown, {2, 78, 14, 8}, pal::textMuted);
     // value read-outs above the knobs
-    const juce::String vals[5] = {fmt::seconds(env_.attack), fmt::seconds(env_.hold), fmt::seconds(env_.decay),
-                                  env_.sustain <= 1.0e-4 ? "-INF DB" : fmt::db(env_.sustain), fmt::seconds(env_.release)};
+    auto timeText = [this](double v) { return env_.tempoSync ? formatNumber(v, 3) + " B" : fmt::seconds(v); };
+    const juce::String vals[5] = {timeText(env_.attack), timeText(env_.hold), timeText(env_.decay),
+                                  env_.sustain <= 1.0e-4 ? "-INF DB" : fmt::db(env_.sustain), timeText(env_.release)};
     const int ex = extraH();
     for (int i = 0; i < 5; ++i) drawTextIn(g, vals[i], {6 + i * ((r.getWidth() - 12) / 5), 121 + ex, (r.getWidth() - 12) / 5, 12}, pal::lcd, juce::Justification::centred);
     hLine(g, 3, 135 + ex, r.getWidth() - 6, pal::edgeDark);
@@ -560,12 +568,12 @@ LfoPanel::LfoPanel(UiContext& c) : Panel(c) {
     rateHz_ = &make<Knob>(ctx, KnobSpec{"RATE", 0.01, 100.0, 1.0, false, true, 1.0, 0, fmt::hz},
         [this](const Patch& p) { return std::max(0.01, effectiveLfo(p, ctx.selectedLfo).rateHz); },
         [this](Patch& p, double v) { if (ctx.selectedLfo == 0) { modernizeLfo(p); } p.lfoDefinitions[std::size_t(ctx.selectedLfo)].rateHz = v; }, 26);
-    rateSync_ = &make<Knob>(ctx, KnobSpec{"RATE", 0, 9, 5, false, false, 1.0, 1, [](double v) { return juce::String(kDivisionNames[std::clamp(int(std::round(v)), 0, 9)]); }},
+    rateSync_ = &make<Knob>(ctx, KnobSpec{"RATE", 0, 14, 7, false, false, 1.0, 1, [](double v) { return juce::String(kDivisionNames[std::clamp(int(std::round(v)), 0, 14)]); }},
         [this](const Patch& p) { return double(divisionIndex(effectiveLfo(p, ctx.selectedLfo).syncBeats)); },
         [this](Patch& p, double v) {
             if (ctx.selectedLfo == 0) modernizeLfo(p);
             auto& d = p.lfoDefinitions[std::size_t(ctx.selectedLfo)];
-            d.syncBeats = kDivisions[std::clamp(int(std::round(v)), 0, 9)] * modifierOf(d.syncBeats); }, 26);
+            d.syncBeats = kDivisions[std::clamp(int(std::round(v)), 0, 14)] * modifierOf(d.syncBeats); }, 26);
     struct K { LfoParam p; const char* label; double hi; double skew; std::function<juce::String(double)> f; };
     const K ks[4] = {{LfoParam::rise, "RISE", 4.0, 0.4, fmt::seconds}, {LfoParam::delay, "DELAY", 4.0, 0.4, fmt::seconds},
                      {LfoParam::smooth, "SMOOTH", 100.0, 1.0, [](double v) { return formatNumber(v, 0) + "%"; }},
@@ -633,6 +641,7 @@ MapPanel::MapPanel(UiContext& c) : Panel(c) {
 void MapPanel::refresh(const Patch& p) {
     Panel::refresh(p);
     routes_ = ctx.selectedMap == 0 ? countRoutes(p, ModSource::velocity, 0) : countRoutes(p, ModSource::note, 0);
+    mapping_ = ctx.selectedMap == 0 ? p.velocityCurve : p.noteCurve;
     poly_n_ = p.polyphony;
     repaint();
 }
@@ -657,11 +666,17 @@ void MapPanel::paint(juce::Graphics& g) {
         const auto in = local.reduced(3);
         for (int i = 1; i < 4; ++i) { const int x = in.getX() + in.getWidth() * i / 4; for (int y = in.getY(); y < in.getBottom(); y += 3) px(g, x, y, pal::violetShadow); }
         for (int i = 1; i < 4; ++i) { const int y = in.getY() + in.getHeight() * i / 4; for (int x = in.getX(); x < in.getRight(); x += 3) px(g, x, y, pal::violetShadow); }
-        pixelLine(g, in.getX(), in.getBottom() - 1, in.getRight() - 1, in.getY(), pal::violetHot);
-        for (int x = in.getX(); x < in.getRight(); ++x) { const int y = in.getBottom() - 1 - (x - in.getX()) * (in.getHeight() - 1) / (in.getWidth() - 1); g.setColour(mix(pal::violetShadow, pal::violetWell, 0.3f)); g.fillRect(x, y + 1, 1, in.getBottom() - y - 1); }
+        int lastY = in.getBottom() - 1;
+        for (int x = in.getX(); x < in.getRight(); ++x) {
+            const double input = double(x - in.getX()) / std::max(1, in.getWidth() - 1);
+            const int y = in.getBottom() - 1 - int(std::round(std::clamp(dsp::evalCurve(mapping_, input), 0.0, 1.0) * (in.getHeight() - 1)));
+            g.setColour(mix(pal::violetShadow, pal::violetWell, 0.3f)); g.fillRect(x, y + 1, 1, in.getBottom() - y - 1);
+            if (x > in.getX()) pixelLine(g, x - 1, lastY, x, y, pal::violetHot);
+            lastY = y;
+        }
         drawText(g, ctx.selectedMap == 0 ? "VELOCITY" : "NOTE", in.getX() + 3, in.getY() + 3, pal::violetHot, 1, true);
         drawText(g, juce::String(routes_) + (routes_ == 1 ? " ROUTE" : " ROUTES"), in.getX() + 3, in.getY() + 13, pal::textBody);
-        drawSmall(g, "LINEAR MAPPING", in.getX() + 3, in.getBottom() - 8, pal::textMuted);
+        drawSmall(g, mapping_.empty() ? "LINEAR MAPPING" : "PRESET MAPPING", in.getX() + 3, in.getBottom() - 8, pal::textMuted);
     });
     // voicing
     drawText(g, "VOICING", 8, 126 + ex, pal::textHi, 1, true);

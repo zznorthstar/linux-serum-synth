@@ -2,7 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zygzxg.assets import index_content, references_from_state, resolve_asset
+from zygzxg.assets import index_content, references_from_state, resolve_asset, save_index, load_index
+from zygzxg.corpus import save_report
 from zygzxg.serum import PresetFormatError, SerumDocument, decode_bytes, encode_bytes
 
 
@@ -22,6 +23,21 @@ class SerumContainerTests(unittest.TestCase):
 
 
 class AssetIndexTests(unittest.TestCase):
+    def test_unicode_asset_index_and_corpus_report(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            asset = root / "Tables" / "User" / "Tōne 音.wav"
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b"RIFF")
+            index = index_content(root)
+            target = root / "index.json"
+            save_index(index, target)
+            self.assertEqual(load_index(target), index)
+            self.assertIn("Tōne 音.wav", target.read_text(encoding="utf-8"))
+            report = root / "report.json"
+            save_report({"name": "Tōne 音"}, report)
+            self.assertIn("Tōne 音", report.read_text(encoding="utf-8"))
+
     def test_exact_resolution_and_missing_asset(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

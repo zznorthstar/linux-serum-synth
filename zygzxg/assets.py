@@ -83,11 +83,11 @@ def inventory(index: dict[str, Any]) -> dict[str, Any]:
 def save_index(index: dict[str, Any], destination: str | Path) -> None:
     target = Path(destination)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n")
+    target.write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def load_index(path: str | Path) -> dict[str, Any]:
-    index = json.loads(Path(path).read_text())
+    index = json.loads(Path(path).read_text(encoding="utf-8"))
     if index.get("format") != "zygzxg.asset-index.v1":
         raise ValueError("unsupported asset-index format")
     return index

@@ -127,6 +127,8 @@ struct LfoDefinition {
 
 struct Envelope {
     double attack = 0.005, hold = 0.0, decay = 2.0, sustain = 1.0, release = 0.075;
+    bool tempoSync = false;          // time fields are quarter-note beats when enabled
+    bool exponentialCurves = false; // normalized exponential interpolation, with cubic midpoint control
     std::array<double, 3> curve {50.0, 66.6, 66.6};
     double start = 0.0, end = 0.0;    // level offsets (normalized)
     bool legatoInverted = false;
@@ -156,10 +158,19 @@ struct Oscillator {
     int octave = 0, unison = 1;
     double semitone = 0.0, pitch = 0.0; // coarse and pitch knobs, in semitones
     double fine = 0.0, volume = 0.75, pan = 0.0, detune = 0.2;
+    double volumeModulationPower = 1.0, detuneModulationPower = 1.0;
+    double detuneExponent = 1.5, detunePolarity = 1.0;
+    bool spreadUnisonPhase = true;
     double tablePosition = 0.0, initialPhase = 0.0, randomPhase = 0.0;
+    bool interpolateFrames = true;
+    bool frameBinPosition = false; // normalized position spans frame bins, rather than first-to-last endpoints
     std::string warpOne, warpTwo;
     double warpOneAmount = 0.0, warpTwoAmount = 0.0;
     std::array<WarpDefinition, 2> warpDefinitions;
+    // Reconstruct external audio-rate FM/PM/RM/AM sources at oscillator substeps.
+    // Adds 24 input samples of modulation-path delay. Older native JSON keeps
+    // held-source behavior when this independent model flag is absent.
+    bool bandlimitedAudioModulation = true;
     std::vector<float> audio; // prepared on the control thread from a user-owned asset
     // Successive octave-bandlimited copies of `audio`, excluding the raw
     // level. Each complete level has audio.size() samples. This cache is
@@ -241,10 +252,14 @@ struct Filter {
     FilterResponse response = FilterResponse::low12;
     int variant = 0;                 // exact member of a response family (see Filters.cpp)
     double cutoff = 1.0, resonance = 10.0, drive = 0.0, var = 0.0, wet = 100.0;
+    double cutoffMinHz = 20.0, cutoffMaxHz = 20000.0, cutoffCeilingHz = 20000.0;
     double level = 0.5, stereo = 50.0, x = 0.5, y = 0.5;
     bool keyTrack = false, pad = false;
     Json additional;
 };
+double filterCutoffHz(const Filter& filter, double normalized) noexcept;
+double filterCutoffNormalized(const Filter& filter, double hz) noexcept;
+
 struct Route {
     RouteTarget target = RouteTarget::unknown;
     double filterBalance = -100.0;   // -100 = Filter 1 only, 0 = both, +100 = Filter 2 only
@@ -281,6 +296,7 @@ enum class FxType {
 };
 inline constexpr int fxParamSlots = 24;
 inline constexpr int fxLevelSlot = 23; // LevelOut, shared by every module type
+enum class DelayTimingModel { seconds, fourthPowerBeatGrid };
 struct ConvIr; // partitioned impulse response prepared off the audio thread (dsp/FxEngine.h)
 struct FxModule {
     std::string type;                 // provenance name (e.g. "FXDelay")
@@ -296,6 +312,35 @@ struct FxModule {
     FilterResponse filterResponse = FilterResponse::low12; // FXFilter type
     int filterVariant = 0;            // FXFilter family member
     int modeVariant = 0;              // distortion / reverb / delay mode enum
+    double distortionInputGainDb = 0.0, distortionDriveRangeDb = 36.0, distortionGainCompensation = 0.5;
+    // Import revision: 0=shelf, 1=bell, 2=cut and measured resonance travel.
+    // Missing native fields retain the historical bell/shelf interpretation.
+    bool eqMeasuredModes = false;
+    // Inverse-cubic threshold, linear makeup and no automatic loudness match
+    // in single-band mode. The native multiband model remains independent.
+    bool compressorCubicSingleBand = false;
+    // Versioned import semantics; old native saves retain their gain curves.
+    // Band deadbands use dB, not the controller's normalized default values.
+    bool compressorGlobalControls = false;
+    // Separate revisions preserve native saves made before gain/mix calibration.
+    bool compressorAffineMakeup = false;
+    bool compressorPhaseMatchedDry = true;
+    // Negative follows the global attack. Nonnegative selects an independent
+    // fixed band-detector attack in ms; old native saves keep the global path.
+    double compressorBandAttackMs = -1.0;
+    std::array<double, 3> compressorDeadbandDb {7.0, 11.6, 5.3};
+    std::array<bool, 3> compressorBypassUp {}, compressorBypassDown {};
+    // Independent multiband revision: phase-aligned bands and parallel dry path,
+    // explicit makeup, no hidden loudness matching. Missing fields in old saves
+    // select the historical model. Wet=0 retains crossover allpass phase;
+    // disable the module for sample-transparent bypass.
+    bool phaseCoherentMultiband = true;
+    // Old native files retain their historical half-dry, unfiltered echo model.
+    // New modules use full wet endpoints, filtered taps and separate decay/pre-delay.
+    bool legacyTimeFx = false;
+    // Separate from wet/tap migration: old native state keeps seconds-only
+    // timing; calibrated imports select a quantized beat grid at runtime.
+    DelayTimingModel delayTimingModel = DelayTimingModel::seconds;
     SamplePtr impulse;                // FXConv impulse response audio
     std::shared_ptr<const ConvIr> convIr; // derived; not serialized
     std::string impulsePath;
@@ -314,8 +359,12 @@ struct GlobalState {
     VoicePriority priority = VoicePriority::latest;
     double masterTuning = 440.0, transpose = 0.0, swing = 50.0;
     int oversampling = 0;
+    bool tightOutputDecimator = true; // absent in older native saves: historical 63-tap output
     bool noteLatch = false, limitSameNote = false;
     double voiceAmp = 1.0, modWheel = 0.0;
+    double masterModulationPower = 1.0;
+    double outputGain = 1.0;
+    bool masterAfterEffects = false;
     double velocityAmpDepth = 0.0;   // 0 = velocity only acts through the matrix (Serum behaviour)
     double envTimeScale = 50.0, lfoTimeScale = 50.0; // 50 = unity
     int pitchQuantizerKey = 0, pitchQuantizerScale = 0; // Serum ids, retained as provenance
@@ -387,6 +436,8 @@ struct Patch {
     std::array<Filter, 2> filters;
     std::array<Route, 7> routes;
     std::array<Envelope, 4> envelopes;
+    CurvePoints velocityCurve, noteCurve; // empty is identity; source modulation maps
+    bool quantizeVelocityCurve = false;
     std::vector<ModulationRoute> modulation;
     std::vector<FxModule> fx;
     std::array<Json, 10> lfos;
@@ -425,7 +476,7 @@ RouteTarget routeTargetFromString(const std::string& name);
 // Matrix amounts are a percentage of (hi - lo).
 // `log`: the parameter's normalized knob position is logarithmic between max(lo, hi * 1e-4) and hi
 // (times and frequencies), so a percentage of modulation moves it by a ratio, not a fixed amount.
-struct ParamRange { double lo, hi; bool log = false; };
+struct ParamRange { double lo, hi; bool log = false; double power = 1.0; };
 // Applies a normalized modulation delta (a fraction of the knob travel) to a stored value.
 double applyModulation(double base, double normalizedDelta, const ParamRange& range) noexcept;
 ParamRange oscParamRange(OscParam param) noexcept;

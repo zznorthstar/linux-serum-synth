@@ -1,0 +1,2203 @@
+{
+  "date": "2026-10-20",
+  "reference": {
+    "instrumentVersion": "2.1.5",
+    "host": "REAPER 7.82 Windows",
+    "sampleRate": 48000,
+    "float32": true,
+    "note": 60,
+    "velocity": 127,
+    "bpm": 120,
+    "noteStartSeconds": 1,
+    "noteHoldSeconds": 4,
+    "measurementWindowSeconds": [
+      3,
+      4
+    ],
+    "levelMatched": false,
+    "latencyFitted": false
+  },
+  "nativeModel": {
+    "field": "eqMeasuredModes",
+    "missingValue": false,
+    "newImportValue": true,
+    "modes": {
+      "0": "shelf",
+      "1": "bell",
+      "2": "cut"
+    },
+    "lowerCut": "highpass",
+    "upperCut": "lowpass",
+    "cutGainActive": false,
+    "qCoordinates": {
+      "shelf": "0.4 + 1.7415*u^3",
+      "bellAndCut": "0.1 + 18.9*u^4",
+      "u": "clamp(resonance/100,0,1)"
+    },
+    "structure": "Independent trapezoidal state-variable EQ using existing native SVF state",
+    "controlSlewSeconds": 0.002,
+    "firstBindingAtRequestedControls": true,
+    "nativeCreativeDefaultsUnchanged": true,
+    "guiModeChoicesUpdated": false
+  },
+  "controlled": {
+    "referenceRenders": 103,
+    "eqResponseCases": 90,
+    "dryControls": 10,
+    "sparseBodeControls": 3,
+    "beforeMaximumGainErrorDb": 54.69435159362347,
+    "afterMaximumGainErrorDb": 0.0013841495335924492,
+    "afterMedianGainErrorDb": 0.001238676670617167,
+    "cases": [
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b1-t0-g12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.957307524227339,
+          "native": 11.958539099086707
+        },
+        "errorDb": 0.0012315748593678677,
+        "beforeErrorDb": -11.9422042787388
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b1-t1-g12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.09785555298218185,
+          "native": 0.09909409673654324
+        },
+        "errorDb": 0.0012385437543613875,
+        "beforeErrorDb": -0.08275230749364226
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b1-t2-g12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -39.965607582799144,
+          "native": -39.96436551358693
+        },
+        "errorDb": 0.0012420692122177002,
+        "beforeErrorDb": 51.96399718462547
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b2-t0-g12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.04021614752766567,
+          "native": 0.04146089601813685
+        },
+        "errorDb": 0.0012447484904711814,
+        "beforeErrorDb": -0.025112902039126084
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b2-t1-g12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.09785555298218185,
+          "native": 0.09909409673654324
+        },
+        "errorDb": 0.0012385437543613875,
+        "beforeErrorDb": -0.08275230749364226
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b2-t2-g12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.058977943741595595,
+          "native": 0.060216333681253786
+        },
+        "errorDb": 0.001238389939658191,
+        "beforeErrorDb": -0.05736756992140357
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b1-t0-g12-q50",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 10.463695282901043,
+          "native": 10.464842148232322
+        },
+        "errorDb": 0.0011468653312789456,
+        "beforeErrorDb": -9.856157959622195
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b1-t1-g12-q50",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.8820645583999536,
+          "native": 2.8833044797972036
+        },
+        "errorDb": 0.0012399213972500434,
+        "beforeErrorDb": -2.2745272351211057
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b1-t2-g12-q50",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -10.605758282341618,
+          "native": -10.6045128805563
+        },
+        "errorDb": 0.0012454017853187338,
+        "beforeErrorDb": 21.711839475289658
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b2-t0-g12-q50",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 1.5338294144999907,
+          "native": 1.5351578854189967
+        },
+        "errorDb": 0.0013284709190060084,
+        "beforeErrorDb": -0.9262920912211428
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b2-t1-g12-q50",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.8820645583999536,
+          "native": 2.8833044797972036
+        },
+        "errorDb": 0.0012399213972500434,
+        "beforeErrorDb": -2.2745272351211057
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b2-t2-g12-q50",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 1.4540734779874498,
+          "native": 1.4553139761051384
+        },
+        "errorDb": 0.0012404981176885599,
+        "beforeErrorDb": -0.5601546164564866
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b1-t0-g12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 5.998766679275242,
+          "native": 5.999999931996086
+        },
+        "errorDb": 0.0012332527208442912,
+        "beforeErrorDb": 6.00123334816422
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b1-t1-g12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.99875959427429,
+          "native": 12.000000026657112
+        },
+        "errorDb": 0.0012404323828221209,
+        "beforeErrorDb": 0.0012404331651723055
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b1-t2-g12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.151430105263472,
+          "native": 2.152677502421767
+        },
+        "errorDb": 0.0012473971582949162,
+        "beforeErrorDb": 3.8485698733839513
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b2-t0-g12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 5.99875744851321,
+          "native": 6.000000015548096
+        },
+        "errorDb": 0.0012425670348861217,
+        "beforeErrorDb": 6.001242578926252
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b2-t1-g12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.99875959427429,
+          "native": 12.000000026657112
+        },
+        "errorDb": 0.0012404323828221209,
+        "beforeErrorDb": 0.0012404331651723055
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b2-t2-g12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.1514349651375753,
+          "native": 2.152677580968245
+        },
+        "errorDb": 0.0012426158306695356,
+        "beforeErrorDb": 3.848564997971259
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b1-t0-g12-q50",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 1.5221596578515673,
+          "native": 1.523483236711698
+        },
+        "errorDb": 0.0013235788601306808,
+        "beforeErrorDb": -0.9206256309906635
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b1-t1-g12-q50",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.86091099131189,
+          "native": 2.8621474365213757
+        },
+        "errorDb": 0.001236445209485737,
+        "beforeErrorDb": -2.2593769644509862
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b1-t2-g12-q50",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 1.4453609012734319,
+          "native": 1.4465998782953093
+        },
+        "errorDb": 0.0012389770218774743,
+        "beforeErrorDb": -0.5616770598972423
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b2-t0-g12-q50",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 10.475363874547995,
+          "native": 10.476516572587784
+        },
+        "errorDb": 0.001152698039788902,
+        "beforeErrorDb": -9.873829847687091
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b2-t1-g12-q50",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.86091099131189,
+          "native": 2.8621474365213757
+        },
+        "errorDb": 0.001236445209485737,
+        "beforeErrorDb": -2.2593769644509862
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b2-t2-g12-q50",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -10.670623000403097,
+          "native": -10.669388724218344
+        },
+        "errorDb": 0.001234276184753469,
+        "beforeErrorDb": 21.786938924223485
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b1-t0-g12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.028844653155928768,
+          "native": 0.03008744068329605
+        },
+        "errorDb": 0.001242787527367284,
+        "beforeErrorDb": -0.017847511755050505
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b1-t1-g12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.07113104702128226,
+          "native": 0.07236925374736103
+        },
+        "errorDb": 0.0012382067260787721,
+        "beforeErrorDb": -0.06013390562040399
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b1-t2-g12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.04282479507221382,
+          "native": 0.044063079559819585
+        },
+        "errorDb": 0.0012382844876057675,
+        "beforeErrorDb": -0.041962669228368554
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b2-t0-g12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.968678980048907,
+          "native": 11.969912551035982
+        },
+        "errorDb": 0.0012335709870754386,
+        "beforeErrorDb": -11.957681838648028
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b2-t1-g12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.07113104702128226,
+          "native": 0.07236925374736103
+        },
+        "errorDb": 0.0012382067260787721,
+        "beforeErrorDb": -0.06013390562040399
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b2-t2-g12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -42.6952139367871,
+          "native": -42.69398049254949
+        },
+        "errorDb": 0.0012334442376058519,
+        "beforeErrorDb": 54.69435159362347
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b1-t0-g12-q0",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 8.626173727441142,
+          "native": 8.627413859550508
+        },
+        "errorDb": 0.0012401321093662432,
+        "beforeErrorDb": 1.0155403679425774
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b1-t0-g12-q25",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 8.87290125893854,
+          "native": 8.874124050424491
+        },
+        "errorDb": 0.001222791485950836,
+        "beforeErrorDb": -7.132604689278743
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b1-t0-g12-q75",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 13.303443504244669,
+          "native": 13.304535458871385
+        },
+        "errorDb": 0.001091954626716074,
+        "beforeErrorDb": -13.004134349608236
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b1-t0-g12-q100",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 15.418114948146638,
+          "native": 15.41925587268669
+        },
+        "errorDb": 0.001140924540052879,
+        "beforeErrorDb": -15.241515595838017
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b2-t0-g12-q0",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 3.3713478788499316,
+          "native": 3.3725860820674
+        },
+        "errorDb": 0.001238203217468481,
+        "beforeErrorDb": 6.2703662165337875
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b2-t0-g12-q25",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 3.1246233641209074,
+          "native": 3.1258759947747166
+        },
+        "errorDb": 0.0012526306538092058,
+        "beforeErrorDb": -1.38432679446111
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b2-t0-g12-q75",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -1.3059196125466315,
+          "native": -1.304535463013039
+        },
+        "errorDb": 0.0013841495335924492,
+        "beforeErrorDb": 1.605228767183064
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f500-b2-t0-g12-q100",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -3.4205963606122793,
+          "native": -3.4192558757266127
+        },
+        "errorDb": 0.0013404848856666263,
+        "beforeErrorDb": 3.5971957129209002
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b1-t0-g12-q0",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 3.3597674509118534,
+          "native": 3.3610052172462304
+        },
+        "errorDb": 0.0012377663343769996,
+        "beforeErrorDb": 6.2632916183200535
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b1-t0-g12-q25",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 3.112670873432762,
+          "native": 3.113921029323727
+        },
+        "errorDb": 0.001250155890964777,
+        "beforeErrorDb": -1.3872216399025845
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b1-t0-g12-q75",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -1.304831150420867,
+          "native": -1.3034496882838695
+        },
+        "errorDb": 0.0013814621369974134,
+        "beforeErrorDb": 1.601062389568689
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b1-t0-g12-q100",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -3.396966417579712,
+          "native": -3.3956297572188205
+        },
+        "errorDb": 0.0013366603608915284,
+        "beforeErrorDb": 3.571720767648145
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b2-t0-g12-q0",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 8.63775568746108,
+          "native": 8.638994816629783
+        },
+        "errorDb": 0.0012391291687023909,
+        "beforeErrorDb": 0.9853033817708265
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b2-t0-g12-q25",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 8.88485300883643,
+          "native": 8.886078959222871
+        },
+        "errorDb": 0.0012259503864413546,
+        "beforeErrorDb": -7.159403775306252
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b2-t0-g12-q75",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 13.302354683718157,
+          "native": 13.303449699155323
+        },
+        "errorDb": 0.001095015437165614,
+        "beforeErrorDb": -13.006123444570335
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f2000-b2-t0-g12-q100",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 15.394492540519678,
+          "native": 15.395629362188785
+        },
+        "errorDb": 0.00113682166910678,
+        "beforeErrorDb": -15.219738190451245
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b1-t1-g-12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 1,
+        "kind": 1,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -0.1003324424421308,
+          "native": -0.09909410148961229
+        },
+        "errorDb": 0.001238340952518513,
+        "beforeErrorDb": 0.08522920825650004
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f100-b2-t1-g-12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 2,
+        "kind": 1,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -0.1003324424421308,
+          "native": -0.09909410148961229
+        },
+        "errorDb": 0.001238340952518513,
+        "beforeErrorDb": 0.08522920825650004
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b1-t1-g-12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -12.001243583988419,
+          "native": -11.99999999312844
+        },
+        "errorDb": 0.001243590859978383,
+        "beforeErrorDb": 0.0012435117804372453
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f1000-b2-t1-g-12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 2,
+        "kind": 1,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -12.001243583988419,
+          "native": -11.99999999312844
+        },
+        "errorDb": 0.001243590859978383,
+        "beforeErrorDb": 0.0012435117804372453
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b1-t1-g-12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -0.07360780445962689,
+          "native": -0.07236937596154291
+        },
+        "errorDb": 0.0012384284980839766,
+        "beforeErrorDb": 0.06261042390566729
+      },
+      {
+        "group": "eq-controls-20261020",
+        "label": "f10000-b2-t1-g-12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 2,
+        "kind": 1,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -0.07360780445962689,
+          "native": -0.07236937596154291
+        },
+        "errorDb": 0.0012384284980839766,
+        "beforeErrorDb": 0.06261042390566729
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t1-g12-q0",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.649479265590493,
+          "native": 11.650718229900995
+        },
+        "errorDb": 0.0012389643105024106,
+        "beforeErrorDb": -2.007765170206774
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t1-g12-q25",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.028961752380923,
+          "native": 11.03020152164521
+        },
+        "errorDb": 0.0012397692642878155,
+        "beforeErrorDb": -9.288665182721125
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t1-g12-q75",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.1880494266216246,
+          "native": 0.18928820005231017
+        },
+        "errorDb": 0.0012387734306855691,
+        "beforeErrorDb": 0.11125972801480799
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t1-g12-q100",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.018581887077431247,
+          "native": 0.019820440137038986
+        },
+        "errorDb": 0.0012385530596077388,
+        "beforeErrorDb": 0.15801746523118965
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t2-g12-q0",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -26.128128215847752,
+          "native": -26.12688858538536
+        },
+        "errorDb": 0.001239630462393393,
+        "beforeErrorDb": 37.23420940879579
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t2-g12-q25",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -21.51540015622234,
+          "native": -21.5141593955277
+        },
+        "errorDb": 0.0012407606946425176,
+        "beforeErrorDb": 32.62148134917038
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t2-g12-q75",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -9.620215726950988,
+          "native": -9.618970547704919
+        },
+        "errorDb": 0.0012451792460694833,
+        "beforeErrorDb": 20.726296919899028
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b1-t2-g12-q100",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -9.57382159717531,
+          "native": -9.572576818118947
+        },
+        "errorDb": 0.0012447790563641092,
+        "beforeErrorDb": 20.67990279012335
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t1-g12-q0",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.998761262651051,
+          "native": 12.000000017482172
+        },
+        "errorDb": 0.001238754831121014,
+        "beforeErrorDb": 0.0012387640060609328
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t1-g12-q25",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.998760696712232,
+          "native": 12.000000026657112
+        },
+        "errorDb": 0.0012393299448802964,
+        "beforeErrorDb": 0.0012393299448802964
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t1-g12-q75",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.998782654960714,
+          "native": 12.000000027439462
+        },
+        "errorDb": 0.0012173724787487572,
+        "beforeErrorDb": 0.0012173724787487572
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t1-g12-q100",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.998812414522533,
+          "native": 12.000000027439462
+        },
+        "errorDb": 0.0011876129169294813,
+        "beforeErrorDb": 0.0011876129169294813
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t2-g12-q0",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -20.001239032685255,
+          "native": -20.0000000404888
+        },
+        "errorDb": 0.0012389921964555128,
+        "beforeErrorDb": 26.00123901133268
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t2-g12-q25",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -15.198839649491426,
+          "native": -15.197599197802333
+        },
+        "errorDb": 0.001240451689092481,
+        "beforeErrorDb": 21.19883962813885
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t2-g12-q75",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 15.676917781176392,
+          "native": 15.678183225443092
+        },
+        "errorDb": 0.0012654442666999444,
+        "beforeErrorDb": -9.676917802528969
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t2-g12-q100",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 25.573805376743547,
+          "native": 25.575072033899595
+        },
+        "errorDb": 0.0012666571560480122,
+        "beforeErrorDb": -19.573805398096123
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t1-g12-q0",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.645876108706346,
+          "native": 11.647114536772015
+        },
+        "errorDb": 0.0012384280656689839,
+        "beforeErrorDb": -2.0228170394744396
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t1-g12-q25",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.019742819470864,
+          "native": 11.020981047999875
+        },
+        "errorDb": 0.0012382285290115647,
+        "beforeErrorDb": -9.294293585940686
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t1-g12-q75",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.18607529399386635,
+          "native": 0.18731389250397967
+        },
+        "errorDb": 0.0012385985101133201,
+        "beforeErrorDb": 0.11015594515395577
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t1-g12-q100",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.018370810783665092,
+          "native": 0.019609049013368463
+        },
+        "errorDb": 0.00123823822970337,
+        "beforeErrorDb": 0.1563835392847679
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t2-g12-q0",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -14.041255798747159,
+          "native": -14.04001660525649
+        },
+        "errorDb": 0.0012391934906688107,
+        "beforeErrorDb": 14.924939640123348
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t2-g12-q25",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 25.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -9.43048721371163,
+          "native": -9.429247514204555
+        },
+        "errorDb": 0.0012396995070744765,
+        "beforeErrorDb": 10.314171055087819
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t2-g12-q75",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 75.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.421581572029069,
+          "native": 2.4228185706845125
+        },
+        "errorDb": 0.0012369986554432444,
+        "beforeErrorDb": -1.5378977306528796
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b1-t2-g12-q100",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 1,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.467483121433041,
+          "native": 2.4687199339711228
+        },
+        "errorDb": 0.0012368125380817219,
+        "beforeErrorDb": -1.5837992800568514
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b2-t1-g12-q0",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.649479265590493,
+          "native": 11.650718229900995
+        },
+        "errorDb": 0.0012389643105024106,
+        "beforeErrorDb": -2.007765170206774
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b2-t1-g12-q100",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.018581887077431247,
+          "native": 0.019820440137038986
+        },
+        "errorDb": 0.0012385530596077388,
+        "beforeErrorDb": 0.15801746523118965
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b2-t2-g12-q0",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -14.068296137616201,
+          "native": -14.067061662133156
+        },
+        "errorDb": 0.0012344754830451166,
+        "beforeErrorDb": 14.962214999147164
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f500-b2-t2-g12-q100",
+        "note": 60,
+        "frequency": 500.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 2.4860100796626625,
+          "native": 2.4872500354903266
+        },
+        "errorDb": 0.0012399558276641187,
+        "beforeErrorDb": -1.5920912181316993
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b2-t1-g12-q0",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 11.645876108706346,
+          "native": 11.647114536772015
+        },
+        "errorDb": 0.0012384280656689839,
+        "beforeErrorDb": -2.0228170394744396
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b2-t1-g12-q100",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 1,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": 0.018370810783665092,
+          "native": 0.019609049013368463
+        },
+        "errorDb": 0.00123823822970337,
+        "beforeErrorDb": 0.1563835392847679
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b2-t2-g12-q0",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 0.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -26.15723982991429,
+          "native": -26.156005636709445
+        },
+        "errorDb": 0.0012341932048443027,
+        "beforeErrorDb": 37.273555753734676
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f2000-b2-t2-g12-q100",
+        "note": 60,
+        "frequency": 2000.0,
+        "band": 2,
+        "kind": 2,
+        "gain": 12.0,
+        "q": 100.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -9.648501120368948,
+          "native": -9.647268999202616
+        },
+        "errorDb": 0.0012321211663319787,
+        "beforeErrorDb": 20.764817044189336
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f100-b1-t0-g-12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 1,
+        "kind": 0,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -11.95978392742628,
+          "native": -11.958539119046407
+        },
+        "errorDb": 0.0012448083798730636,
+        "beforeErrorDb": 11.944680693240649
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f100-b2-t0-g-12-q50",
+        "note": 60,
+        "frequency": 100.0,
+        "band": 2,
+        "kind": 0,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -0.04269278494244588,
+          "native": -0.04146090789836876
+        },
+        "errorDb": 0.0012318770440771232,
+        "beforeErrorDb": 0.02758955075681513
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b1-t0-g-12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -6.001241355882918,
+          "native": -6.000000006733458
+        },
+        "errorDb": 0.001241349149459836,
+        "beforeErrorDb": -5.998758716325064
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f1000-b2-t0-g-12-q50",
+        "note": 60,
+        "frequency": 1000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -6.0012323057815,
+          "native": -6.00000001113942
+        },
+        "errorDb": 0.0012322946420795233,
+        "beforeErrorDb": -5.998767766426482
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f10000-b1-t0-g-12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 1,
+        "kind": 0,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -0.031321362063124525,
+          "native": -0.03008754530981861
+        },
+        "errorDb": 0.0012338167533059163,
+        "beforeErrorDb": 0.020323981509164923
+      },
+      {
+        "group": "eq-resonance-20261020",
+        "label": "f10000-b2-t0-g-12-q50",
+        "note": 60,
+        "frequency": 10000.0,
+        "band": 2,
+        "kind": 0,
+        "gain": -12.0,
+        "q": 50.0,
+        "bode": false,
+        "gainDb": {
+          "reference": -11.971154689528916,
+          "native": -11.969912565870892
+        },
+        "errorDb": 0.001242123658023786,
+        "beforeErrorDb": 11.960157308974956
+      }
+    ]
+  },
+  "musicianCorpus": {
+    "cases": 24,
+    "finiteAudible": 24,
+    "missingAssets": 0,
+    "rmsErrorImproved": 13,
+    "rmsErrorWorsened": 9,
+    "sampleIdentical": 2,
+    "largestAdditionalAttenuationDb": 11.318192261447393,
+    "casesWithPartialDiagnostics": 8,
+    "results": [
+      {
+        "caseId": "p00-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -11.77031966612876,
+        "afterRmsDifferenceDb": -5.065644018705218,
+        "beforeEnvelopeCorrelation": 0.9534356608796333,
+        "afterEnvelopeCorrelation": 0.9452376847007944,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p00-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.855883203826583,
+        "afterRmsDifferenceDb": -3.3011332439770804,
+        "beforeEnvelopeCorrelation": 0.9530835890946051,
+        "afterEnvelopeCorrelation": 0.9562668043505576,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p01-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -7.111893398101625,
+        "afterRmsDifferenceDb": -7.127344841474251,
+        "beforeEnvelopeCorrelation": 0.8726828402482036,
+        "afterEnvelopeCorrelation": 0.8776827710657509,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p01-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -0.8677742738303671,
+        "afterRmsDifferenceDb": -0.8330886268532467,
+        "beforeEnvelopeCorrelation": 0.9826292157636443,
+        "afterEnvelopeCorrelation": 0.9843610362127035,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p02-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -14.761469177182718,
+        "afterRmsDifferenceDb": -14.664393752730625,
+        "beforeEnvelopeCorrelation": 0.7675113336993202,
+        "afterEnvelopeCorrelation": 0.7675486821351952,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p02-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -15.817661930965777,
+        "afterRmsDifferenceDb": -15.406352668084413,
+        "beforeEnvelopeCorrelation": 0.7724552287104415,
+        "afterEnvelopeCorrelation": 0.7696711717560369,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p03-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -11.174304693846661,
+        "afterRmsDifferenceDb": -11.042657186600596,
+        "beforeEnvelopeCorrelation": 0.9541205483375024,
+        "afterEnvelopeCorrelation": 0.9567618046268682,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p03-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.360109236223217,
+        "afterRmsDifferenceDb": -10.508684825146041,
+        "beforeEnvelopeCorrelation": 0.9455716216614674,
+        "afterEnvelopeCorrelation": 0.9612964101749769,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p04-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -4.033243260223692,
+        "afterRmsDifferenceDb": -4.032144002857315,
+        "beforeEnvelopeCorrelation": 0.7140739560916893,
+        "afterEnvelopeCorrelation": 0.7139842322681969,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p04-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -3.1328629012905154,
+        "afterRmsDifferenceDb": -3.2147175856890016,
+        "beforeEnvelopeCorrelation": 0.7126323536253789,
+        "afterEnvelopeCorrelation": 0.7099446348407107,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p05-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -8.040043013340998,
+        "afterRmsDifferenceDb": -19.35823527478839,
+        "beforeEnvelopeCorrelation": 0.9273242522536519,
+        "afterEnvelopeCorrelation": 0.8988203634699052,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p05-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.248698137120662,
+        "afterRmsDifferenceDb": -12.245255179047767,
+        "beforeEnvelopeCorrelation": 0.97737941915891,
+        "afterEnvelopeCorrelation": 0.9623032463217824,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p06-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": 1.780117717567439,
+        "afterRmsDifferenceDb": 1.5625382417905058,
+        "beforeEnvelopeCorrelation": 0.7961584340155247,
+        "afterEnvelopeCorrelation": 0.7948248356323138,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p06-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -3.513657212854131,
+        "afterRmsDifferenceDb": -3.731112200670257,
+        "beforeEnvelopeCorrelation": 0.857732125812193,
+        "afterEnvelopeCorrelation": 0.8571826901628523,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p07-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -19.945326880354287,
+        "afterRmsDifferenceDb": -19.945326880354287,
+        "beforeEnvelopeCorrelation": 0.8595328006521488,
+        "afterEnvelopeCorrelation": 0.8595328006521488,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p07-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -14.578071299190654,
+        "afterRmsDifferenceDb": -14.578071299190654,
+        "beforeEnvelopeCorrelation": 0.9067703613097944,
+        "afterEnvelopeCorrelation": 0.9067703613097944,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p08-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -10.81128580671517,
+        "afterRmsDifferenceDb": -2.4140078362606054,
+        "beforeEnvelopeCorrelation": 0.8304573836584314,
+        "afterEnvelopeCorrelation": 0.790607912848524,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p08-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -13.375616289492006,
+        "afterRmsDifferenceDb": -5.46993257053162,
+        "beforeEnvelopeCorrelation": 0.9905901481446061,
+        "afterEnvelopeCorrelation": 0.9857092627083911,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p09-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": 0.22439896123453806,
+        "afterRmsDifferenceDb": 0.314217391368242,
+        "beforeEnvelopeCorrelation": 0.7246742469578478,
+        "afterEnvelopeCorrelation": 0.7240292842100317,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p09-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -1.8770153951350945,
+        "afterRmsDifferenceDb": -1.8519180418015164,
+        "beforeEnvelopeCorrelation": 0.6338697729864124,
+        "afterEnvelopeCorrelation": 0.6325597662339437,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p10-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -11.99644616589135,
+        "afterRmsDifferenceDb": -11.448819864923365,
+        "beforeEnvelopeCorrelation": 0.9645934325437103,
+        "afterEnvelopeCorrelation": 0.9673025053854959,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p10-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -11.649804964762879,
+        "afterRmsDifferenceDb": -10.188921136678786,
+        "beforeEnvelopeCorrelation": 0.9701854874871555,
+        "afterEnvelopeCorrelation": 0.9763016465665507,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p11-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -7.582427101489007,
+        "afterRmsDifferenceDb": -7.595105981796419,
+        "beforeEnvelopeCorrelation": 0.8741809923468894,
+        "afterEnvelopeCorrelation": 0.8741019444753876,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p11-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.885055459795495,
+        "afterRmsDifferenceDb": -10.88882570993098,
+        "beforeEnvelopeCorrelation": 0.988627948891866,
+        "afterEnvelopeCorrelation": 0.9887085489921293,
+        "sampleIdentical": false
+      }
+    ]
+  },
+  "stageInvestigation": {
+    "cases": 26,
+    "sourceOnlyGapDb": [
+      -13.788451868305632,
+      -11.500756352921677
+    ],
+    "casesNumeric": [
+      {
+        "label": "v2-p10-s0-legacy1-n36",
+        "note": 36,
+        "prefixCount": 0,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -28.516890100097147,
+          "native": -42.30534196840278
+        },
+        "errorDb": -13.788451868305632,
+        "envelopeCorrelation": 0.9724064045645884
+      },
+      {
+        "label": "v2-p10-s0-legacy1-n60",
+        "note": 60,
+        "prefixCount": 0,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -31.37656265916563,
+          "native": -42.877319012087305
+        },
+        "errorDb": -11.500756352921677,
+        "envelopeCorrelation": 0.9737221365643187
+      },
+      {
+        "label": "v2-p10-s1-legacy1-n36",
+        "note": 36,
+        "prefixCount": 1,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -28.51923222085332,
+          "native": -44.75388822766557
+        },
+        "errorDb": -16.23465600681225,
+        "envelopeCorrelation": 0.9746805070946355
+      },
+      {
+        "label": "v2-p10-s1-legacy1-n60",
+        "note": 60,
+        "prefixCount": 1,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -31.378904935761422,
+          "native": -43.90400931567286
+        },
+        "errorDb": -12.525104379911436,
+        "envelopeCorrelation": 0.9718947422674009
+      },
+      {
+        "label": "v2-p10-s2-legacy1-n36",
+        "note": 36,
+        "prefixCount": 2,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -28.444927649040757,
+          "native": -44.75388822766557
+        },
+        "errorDb": -16.308960578624813,
+        "envelopeCorrelation": 0.975683220998519
+      },
+      {
+        "label": "v2-p10-s2-legacy1-n60",
+        "note": 60,
+        "prefixCount": 2,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -31.336929014110808,
+          "native": -43.90400931567286
+        },
+        "errorDb": -12.56708030156205,
+        "envelopeCorrelation": 0.9725919363040253
+      },
+      {
+        "label": "v2-p10-s3-legacy1-n36",
+        "note": 36,
+        "prefixCount": 3,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -22.388787728503978,
+          "native": -38.35110613009118
+        },
+        "errorDb": -15.962318401587204,
+        "envelopeCorrelation": 0.9668032292539175
+      },
+      {
+        "label": "v2-p10-s3-legacy1-n60",
+        "note": 60,
+        "prefixCount": 3,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -17.655818154955117,
+          "native": -32.62962541581902
+        },
+        "errorDb": -14.973807260863904,
+        "envelopeCorrelation": 0.9549943527763135
+      },
+      {
+        "label": "v2-p10-s4-legacy1-n36",
+        "note": 36,
+        "prefixCount": 4,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -22.43559417093836,
+          "native": -40.09618021626573
+        },
+        "errorDb": -17.66058604532737,
+        "envelopeCorrelation": 0.9612784752704086
+      },
+      {
+        "label": "v2-p10-s4-legacy1-n60",
+        "note": 60,
+        "prefixCount": 4,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -17.925572168160972,
+          "native": -34.07261662422919
+        },
+        "errorDb": -16.14704445606822,
+        "envelopeCorrelation": 0.9285943664530437
+      },
+      {
+        "label": "v2-p10-s5-legacy1-n36",
+        "note": 36,
+        "prefixCount": 5,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -25.82325799260189,
+          "native": -31.99818790075941
+        },
+        "errorDb": -6.174929908157523,
+        "envelopeCorrelation": 0.970869878343255
+      },
+      {
+        "label": "v2-p10-s5-legacy1-n60",
+        "note": 60,
+        "prefixCount": 5,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -24.552283473261824,
+          "native": -28.589804762912895
+        },
+        "errorDb": -4.037521289651071,
+        "envelopeCorrelation": 0.9728724893923585
+      },
+      {
+        "label": "v2-p10-s6-legacy1-n36",
+        "note": 36,
+        "prefixCount": 6,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -25.647734529709464,
+          "native": -32.88706078101265
+        },
+        "errorDb": -7.239326251303186,
+        "envelopeCorrelation": 0.9541016118853193
+      },
+      {
+        "label": "v2-p10-s6-legacy1-n60",
+        "note": 60,
+        "prefixCount": 6,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -24.414367341319103,
+          "native": -30.254218700772597
+        },
+        "errorDb": -5.839851359453494,
+        "envelopeCorrelation": 0.9698590737213445
+      },
+      {
+        "label": "v2-p10-s7-legacy1-n36",
+        "note": 36,
+        "prefixCount": 7,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -25.698460882265678,
+          "native": -34.63545337264426
+        },
+        "errorDb": -8.936992490378579,
+        "envelopeCorrelation": 0.9565270300246487
+      },
+      {
+        "label": "v2-p10-s7-legacy1-n60",
+        "note": 60,
+        "prefixCount": 7,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -24.447028811133485,
+          "native": -32.005148571206384
+        },
+        "errorDb": -7.558119760072898,
+        "envelopeCorrelation": 0.973366449339126
+      },
+      {
+        "label": "v2-p10-s8-legacy1-n36",
+        "note": 36,
+        "prefixCount": 8,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -26.159869733099836,
+          "native": -37.63371480337085
+        },
+        "errorDb": -11.473845070271015,
+        "envelopeCorrelation": 0.9649741797463195
+      },
+      {
+        "label": "v2-p10-s8-legacy1-n60",
+        "note": 60,
+        "prefixCount": 8,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -24.78140435961823,
+          "native": -34.97919523155616
+        },
+        "errorDb": -10.197790871937933,
+        "envelopeCorrelation": 0.9764087182792309
+      },
+      {
+        "label": "v2-p10-s9-legacy1-n36",
+        "note": 36,
+        "prefixCount": 9,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -26.185253629951376,
+          "native": -37.63407349494986
+        },
+        "errorDb": -11.448819864998484,
+        "envelopeCorrelation": 0.9673025053700718
+      },
+      {
+        "label": "v2-p10-s9-legacy1-n60",
+        "note": 60,
+        "prefixCount": 9,
+        "legacy": true,
+        "levelsDb": {
+          "reference": -24.790385314745393,
+          "native": -34.97930645160885
+        },
+        "errorDb": -10.188921136863456,
+        "envelopeCorrelation": 0.976301646581962
+      },
+      {
+        "label": "v2-p10-s0-legacy0-n36",
+        "note": 36,
+        "prefixCount": 0,
+        "legacy": false,
+        "levelsDb": {
+          "reference": -28.516659277280745,
+          "native": -42.30534196840278
+        },
+        "errorDb": -13.788682691122034,
+        "envelopeCorrelation": 0.9723463408316306
+      },
+      {
+        "label": "v2-p10-s0-legacy0-n60",
+        "note": 60,
+        "prefixCount": 0,
+        "legacy": false,
+        "levelsDb": {
+          "reference": -31.37708843101549,
+          "native": -42.877319012087305
+        },
+        "errorDb": -11.500230581071815,
+        "envelopeCorrelation": 0.9737067646790001
+      },
+      {
+        "label": "v2-p10-s5-legacy0-n36",
+        "note": 36,
+        "prefixCount": 5,
+        "legacy": false,
+        "levelsDb": {
+          "reference": -25.821760125291995,
+          "native": -31.99818790075941
+        },
+        "errorDb": -6.176427775467417,
+        "envelopeCorrelation": 0.9708597379460318
+      },
+      {
+        "label": "v2-p10-s5-legacy0-n60",
+        "note": 60,
+        "prefixCount": 5,
+        "legacy": false,
+        "levelsDb": {
+          "reference": -24.55210548993195,
+          "native": -28.589804762912895
+        },
+        "errorDb": -4.037699272980944,
+        "envelopeCorrelation": 0.9728556241259837
+      },
+      {
+        "label": "v2-p10-s9-legacy0-n36",
+        "note": 36,
+        "prefixCount": 9,
+        "legacy": false,
+        "levelsDb": {
+          "reference": -26.183931245618584,
+          "native": -37.63407349494986
+        },
+        "errorDb": -11.450142249331275,
+        "envelopeCorrelation": 0.9672941003647623
+      },
+      {
+        "label": "v2-p10-s9-legacy0-n60",
+        "note": 60,
+        "prefixCount": 9,
+        "legacy": false,
+        "levelsDb": {
+          "reference": -24.790601757465577,
+          "native": -34.97930645160885
+        },
+        "errorDb": -10.188704694143272,
+        "envelopeCorrelation": 0.9762998948829743
+      }
+    ],
+    "initialMalformedFixtureExcluded": true,
+    "failedOwnedReferenceExit": 3,
+    "validFixtureUsesPrunedDanglingRoutesAndNeutralController": true,
+    "generalSerum1CompatibilityVerified": false
+  },
+  "validation": {
+    "cppSuites": 8,
+    "dspChecks": 149,
+    "pythonInteropChecks": 7,
+    "retainedBankSmokeCases": 15,
+    "windowsVst3Built": true,
+    "windowsClapBuilt": true,
+    "clapHosted": false,
+    "linuxRerun": false,
+    "installedHost": {
+      "ownedPid": 11308,
+      "exit": 0,
+      "cases": 12,
+      "allFiniteAudible": true,
+      "exactRelations": [
+        {
+          "first": "corrected",
+          "second": "repeat",
+          "maxDifference": 0.0
+        },
+        {
+          "first": "corrected",
+          "second": "recalled",
+          "maxDifference": 0.0
+        },
+        {
+          "first": "oldModel",
+          "second": "missingField",
+          "maxDifference": 0.0
+        },
+        {
+          "first": "cut",
+          "second": "cutGain",
+          "maxDifference": 0.0
+        },
+        {
+          "first": "highCut",
+          "second": "highCutGain",
+          "maxDifference": 0.0
+        }
+      ],
+      "sidecarFreeRecall": true,
+      "gainsDb": {
+        "corrected": 5.999999931996086,
+        "repeat": 5.999999931996086,
+        "recalled": 5.999999931996086,
+        "bell": 12.000000026657112,
+        "cut": 2.152677502421767,
+        "cutGain": 2.152677502421767,
+        "oldModel": 12.000000027439462,
+        "missingField": 12.000000027439462,
+        "highShelf": 6.000000015548096,
+        "highCut": 2.152677580968245,
+        "highCutGain": 2.152677580968245,
+        "dry": 0.0
+      }
+    }
+  },
+  "installedVst3Sha256": "64A5BDB2FDFB60E7BE0BB276875677F379DF3C451CAB9554C0A663546D04FCC8",
+  "limitations": [
+    "Source-only level gap remains about11-14dB in the investigated musician preset",
+    "Other effects and full-chain levels remain partial; one musician case worsens by more than11dB",
+    "Reference modulation transitions, wider frequency/gain/rate conditions and phase identity unverified",
+    "Existing editor EQ mode choices are unchanged and require follow-up",
+    "Factory replacement assets deferred"
+  ]
+}

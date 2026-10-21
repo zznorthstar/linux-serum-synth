@@ -530,7 +530,9 @@ FilterModule::FilterModule(UiContext& c) : Panel(c) {
         knobs_.push_back(k);
         return k;
     };
-    sel(FilterParam::freq, "CUTOFF", fmt::cutoffHz);
+    sel(FilterParam::freq, "CUTOFF", [this](double v) {
+        return ctx.patch ? fmt::hz(filterCutoffHz(ctx.patch->filters[std::size_t(ctx.selectedFilter)], v)) : fmt::cutoffHz(v);
+    });
     sel(FilterParam::reso, "RES", [](double v) { return formatNumber(v, 0) + "%"; });
     sel(FilterParam::drive, "DRIVE", [](double v) { return formatNumber(v, 0) + "%"; });
     sel(FilterParam::var, "VAR", [](double v) { return formatNumber(v, 0) + "%"; });

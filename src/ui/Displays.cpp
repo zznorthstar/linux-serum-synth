@@ -32,7 +32,7 @@ float tableRaw(const Oscillator& o, double phase, double framePos) {
     if (frames < 1 || size < 2) return 0.0f;
     const double fp = std::clamp(framePos, 0.0, double(frames - 1));
     const int f0 = int(fp), f1 = std::min(f0 + 1, frames - 1);
-    const float fm = float(fp - f0);
+    const float fm = o.interpolateFrames ? float(fp - f0) : 0.0f;
     const double x = (phase - std::floor(phase)) * size;
     const int i0 = std::clamp(int(x), 0, size - 1), i1 = (i0 + 1) % size;
     const float t = float(x - std::floor(x));
@@ -42,7 +42,8 @@ float tableRaw(const Oscillator& o, double phase, double framePos) {
     return a + (b - a) * fm;
 }
 double framePosOf(const Oscillator& o, double tablePos) {
-    return std::clamp(tablePos / 256.0, 0.0, 1.0) * double(std::max(0, frameCount(o) - 1));
+    const int frames = frameCount(o);
+    return std::min(double(std::max(0, frames - 1)), std::clamp(tablePos / 256.0, 0.0, 1.0) * double(o.frameBinPosition ? frames : std::max(0, frames - 1)));
 }
 
 // Evaluates one displayed cycle of oscillator `idx` at `framePos`, applying both warp slots in the
@@ -399,6 +400,7 @@ void OscDisplay::paintSub(juce::Graphics& g, const Oscillator& o, juce::Rectangl
 void FilterDisplay::pull(const Patch& p) {
     const auto& f = p.filters[std::size_t(index())];
     if (!have_) shown_ = f;
+    shown_.cutoffMinHz = f.cutoffMinHz; shown_.cutoffMaxHz = f.cutoffMaxHz; shown_.cutoffCeilingHz = f.cutoffCeilingHz;
     filter_ = f; have_ = true;
     repaint();
 }
@@ -456,8 +458,8 @@ void FilterDisplay::mouseDrag(const juce::MouseEvent& e) {
     if (mini_) return;
     const int sel = index();
     const auto r = getLocalBounds().reduced(2);
-    const double cutoff = juce::jlimit(0.0, 1.0, double(e.x - r.getX()) / double(std::max(1, r.getWidth() - 1)) * (3.0 + 0.0) / 3.0);
-    // x maps log-frequency 20 Hz..20 kHz which is exactly the cutoff parameter range.
+    const double position = juce::jlimit(0.0, 1.0, double(e.x - r.getX()) / double(std::max(1, r.getWidth() - 1)));
+    const double cutoff = filterCutoffNormalized(filter_, 20.0 * std::pow(1000.0, position));
     const double reso = juce::jlimit(0.0, 100.0, (1.0 - double(e.y - r.getY()) / double(std::max(1, r.getHeight() - 1))) * 130.0 - 30.0);
     ctx_.edit(this, [sel, cutoff, reso](Patch& p) { p.filters[std::size_t(sel)].cutoff = cutoff; p.filters[std::size_t(sel)].resonance = reso; });
     filter_.cutoff = cutoff; filter_.resonance = reso;
@@ -513,7 +515,8 @@ void FilterDisplay::paintContent(juce::Graphics& g) {
         prev = y;
     }
     // cutoff marker
-    const int cx = in.getX() + int(std::round(std::clamp(shown_.cutoff, 0.0, 1.0) * (in.getWidth() - 1)));
+    const double marker = std::clamp(std::log(filterCutoffHz(shown_, shown_.cutoff) / 20.0) / std::log(1000.0), 0.0, 1.0);
+    const int cx = in.getX() + int(std::round(marker * (in.getWidth() - 1)));
     vLine(g, cx, in.getY(), 3, live ? pal::acid : pal::textMuted);
     vLine(g, cx, in.getBottom() - 3, 3, live ? pal::acid : pal::textMuted);
     if (mini_) return;
@@ -526,7 +529,7 @@ void FilterDisplay::paintContent(juce::Graphics& g) {
         g.setColour(pal::violetHot.withAlpha(0.25f + 0.4f * activity_)); g.fillRect(in.getX() + sx - 3, sy - 3, 7, 7);
         g.setColour(pal::acidHot.withAlpha(0.6f + 0.4f * activity_)); g.fillRect(in.getX() + sx - 1, sy - 1, 3, 3);
     }
-    drawText(g, fmt::cutoffHz(filter_.cutoff), in.getX() + 3, in.getY() + 2, live ? pal::lcd : pal::textMuted);
+    drawText(g, fmt::hz(filterCutoffHz(filter_, filter_.cutoff)), in.getX() + 3, in.getY() + 2, live ? pal::lcd : pal::textMuted);
     drawSmall(g, "100", in.getX() + int(std::round(std::log(100.0 / 20.0) / std::log(1000.0) * (in.getWidth() - 1))) + 2, in.getBottom() - 7, pal::textMuted);
     drawSmall(g, "1K", in.getX() + int(std::round(std::log(1000.0 / 20.0) / std::log(1000.0) * (in.getWidth() - 1))) + 2, in.getBottom() - 7, pal::textMuted);
     drawSmall(g, "10K", in.getX() + int(std::round(std::log(10000.0 / 20.0) / std::log(1000.0) * (in.getWidth() - 1))) + 2, in.getBottom() - 7, pal::textMuted);

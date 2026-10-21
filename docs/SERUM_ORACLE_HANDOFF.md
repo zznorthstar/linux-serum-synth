@@ -1,5 +1,7 @@
 # Serum 2 oracle handoff (for the Windows session with real Serum 2)
 
+> Update 2026-10-17: the reference session is now implemented. See [measured results and remaining gaps](SERUM_ORACLE_MEASUREMENTS.md) and the latest `HANDOFF.md`. The unverified-assumptions list below is historical; several defaults, timing and gain mappings have since been calibrated.
+
 Written 2026-09-27. Read `AGENTS.md`, `HANDOFF.md`, `docs/DSP_DECISIONS.md` and `docs/SERUM2_COMPATIBILITY_MATRIX.md` first.
 
 ## The reported problem

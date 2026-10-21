@@ -1,4 +1,6 @@
 #include "FxEngine.h"
+#include "CompressorCurve.h"
+#include "EqResponse.h"
 #include "Filters.h"
 #include "Warp.h"
 #include "Oversampling.h"
@@ -39,6 +41,29 @@ std::shared_ptr<const ConvIr> buildConvIr(const SampleData& ir, double maxSecond
 }
 
 namespace zyg::dsp {
+double delayGridBeats(double physicalTime) noexcept {
+    const double normalized = std::pow(clampd((physicalTime - delayTimeControlRange.lo)
+        / (delayTimeControlRange.hi - delayTimeControlRange.lo), 0.0, 1.0), 0.25);
+    const int division = std::clamp(int(std::lround(normalized * 11.0)), 0, 11);
+    return std::ldexp(1.0 / 128.0, division);
+}
+
+std::array<double, 2> delayTimeTargets(const FxModule& module, const double* p, double bpm) noexcept {
+    const bool grid = module.delayTimingModel == DelayTimingModel::fourthPowerBeatGrid;
+    const double bps = beatsPerSecond(std::isfinite(bpm) ? bpm : 120.0);
+    const double limit = grid ? maxDelaySeconds : 2.5;
+    const double minimum = grid ? 0.0 : 0.001;
+    auto seconds = [&](int slot) {
+        const double physical = grid ? clampd(p[slot], delayTimeControlRange.lo, delayTimeControlRange.hi) : p[slot];
+        if (!grid) return physical;
+        return p[fx::dBeatSync] > 0.5 ? delayGridBeats(physical) / bps : physical - delayTimeControlRange.lo;
+    };
+    std::array<double, 2> result {{clampd(seconds(fx::dTimeL) * p[fx::dOffsetL], minimum, limit),
+                                 clampd(seconds(fx::dTimeR) * p[fx::dOffsetR], minimum, limit)}};
+    if (p[fx::dLink] > 0.5) result[1] = result[0];
+    return result;
+}
+
 namespace {
 constexpr int Q = fxParamSlots;
 inline double pct(double v) noexcept { return clampd(v / 100.0, 0.0, 1.0); }
@@ -263,11 +288,11 @@ private:
 // ---------------------------------------------------------------- Delay
 class DelayUnit final : public FxUnit {
 public:
-    void prepare(double sr) override { sr_ = sr; for (auto& d : dl_) d.allocate(std::size_t(2.6 * sr) + 16); reset(); }
+    void prepare(double sr) override { sr_ = sr; for (auto& d : dl_) d.allocate(std::size_t(maxDelaySeconds * sr) + 16); reset(); }
     void reset() noexcept override { for (auto& d : dl_) d.clear(); for (auto& s : bp_) s.reset(); sm_[0] = sm_[1] = -1.0; }
-    void process(const FxModule&, const double* p, double* l, double* r, int n) noexcept override {
-        double tL = clampd(p[fx::dTimeL] * p[fx::dOffsetL], 0.001, 2.5), tR = clampd(p[fx::dTimeR] * p[fx::dOffsetR], 0.001, 2.5);
-        if (p[fx::dLink] > 0.5) tR = tL;
+    void process(const FxModule& m, const double* p, double* l, double* r, int n) noexcept override {
+        const auto times = delayTimeTargets(m, p, ctx ? ctx->bpm : 120.0);
+        const double tL = times[0], tR = times[1];
         const double fb = pct(p[fx::dFeedback]), wet = pct(p[fx::dWet]);
         const bool pingPong = p[fx::dMode] > 1.5;
         const double bw = clampd(p[fx::dBW], 0.75, 8.25);
@@ -286,7 +311,9 @@ public:
             } else {
                 dl_[0].push(std::tanh(inL + fb * fl)); dl_[1].push(std::tanh(inR + fb * fr));
             }
-            l[i] = inL * (1.0 - 0.5 * wet) + wet * dl; r[i] = inR * (1.0 - 0.5 * wet) + wet * dr;
+            const double dry = m.legacyTimeFx ? 1.0 - 0.5 * wet : 1.0 - wet;
+            l[i] = inL * dry + wet * (m.legacyTimeFx ? dl : fl);
+            r[i] = inR * dry + wet * (m.legacyTimeFx ? dr : fr);
         }
     }
 private:
@@ -309,7 +336,8 @@ public:
     void reset() noexcept override {
         for (auto& d : dl_) d.clear(); for (auto& d : pre_) d.clear();
         for (auto& c : diff_) for (auto& d : c) d.clear();
-        for (auto& s : damp_) s.reset(); for (auto& s : hp_) s.reset(); phase_ = 0.0;
+        for (auto& s : damp_) s.reset(); for (auto& s : hp_) s.reset(); phase_.fill(0.0);
+        preSm_ = -1.0; fresh_ = true;
     }
     void process(const FxModule& m, const double* p, double* l, double* r, int n) noexcept override {
         // mode: kHall 0, kVintage 1, kSpace 2, kAbyss 3
@@ -321,32 +349,49 @@ public:
         double sizeScale = 0.35 + pct(p[fx::rSize]) * 1.65;
         if (type == 1) sizeScale *= 0.5 + pct(p[fx::rVintageScale]);
         const double scale = sizeScale * typeScale[type];
-        const double t60 = 0.2 + std::pow(pct(p[fx::rFeedback]), 1.5) * (t60Max[type] - 0.2);
-        const double dampHz = clampd(500.0 * std::pow(40.0, pct(p[fx::rFreq])) * dampBias[type], 300.0, 20000.0);
-        const double hpHz = 20.0 * std::pow(30.0, pct(p[fx::rFreqB]));
+        // Hall's displayed decay: verified 1, 2 and 8 second UI values against
+        // normal saved state. This selects our FDN decay target, not its DSP.
+        const double t60 = !m.legacyTimeFx && type == 0 ? 0.75 + std::sqrt(std::max(0.0, p[fx::rDelay]) * 0.441)
+            : 0.2 + std::pow(pct(p[fx::rFeedback]), 1.5) * (t60Max[type] - 0.2);
+        const double dampHz = m.legacyTimeFx ? clampd(500.0 * std::pow(40.0, pct(p[fx::rFreq])) * dampBias[type], 300.0, 20000.0)
+            : 20000.0 * std::pow(0.001, pct(p[fx::rFreqB]));
+        const double hpHz = m.legacyTimeFx ? 20.0 * std::pow(30.0, pct(p[fx::rFreqB]))
+            : 20.0 * std::pow(1000.0, pct(p[fx::rFreq]));
         const double diffG = 0.3 + 0.4 * pct(p[fx::rFreqC]) + (type == 1 ? 0.15 * pct(p[fx::rVintageScaleB]) : 0.0);
         const double modDepth = (0.0004 + pct(p[fx::rMode]) * 0.0015) * (type == 1 ? 2.0 : 1.0) * sr_;
         const double width = pct(p[fx::rWidth]), wet = pct(p[fx::rWet]);
-        const double preSamples = clampd(p[fx::rPreDelay] + p[fx::rDelay] * 0.001, 0.0, 2.7) * sr_;
+        const double preSamples = clampd(p[fx::rPreDelay] + (m.legacyTimeFx ? p[fx::rDelay] * 0.001 : 0.0), 0.0, 2.7) * sr_;
+        double targetLen[lines];
         for (int k = 0; k < lines; ++k) {
-            len_[k] = baseMs[k] * 0.001 * scale * sr_;
-            gain_[k] = std::pow(10.0, -3.0 * (len_[k] / sr_) / t60);
+            targetLen[k] = baseMs[k] * 0.001 * scale * sr_;
+            if (fresh_ || m.legacyTimeFx) len_[k] = targetLen[k];
+            gain_[k] = std::pow(10.0, -3.0 * (targetLen[k] / sr_) / t60);
             damp_[k].set(dampHz, sr_); hp_[k].set(hpHz, sr_);
         }
         for (int c = 0; c < 2; ++c) for (auto& a : diff_[c]) a.g = clampd(diffG, 0.1, 0.75);
+        if (preSm_ < 0.0) preSm_ = preSamples;
+        fresh_ = false;
+        const double slew = 1.0 - std::exp(-1.0 / (0.01 * sr_));
         for (int i = 0; i < n; ++i) {
             const double dryL = l[i], dryR = r[i];
             pre_[0].push(dryL); pre_[1].push(dryR);
-            double inL = preSamples > 1.0 ? pre_[0].read(preSamples) : dryL;
-            double inR = preSamples > 1.0 ? pre_[1].read(preSamples) : dryR;
+            preSm_ += m.legacyTimeFx ? preSamples - preSm_ : slew * (preSamples - preSm_);
+            double inL = preSm_ > 1.0 ? pre_[0].read(preSm_) : dryL;
+            double inR = preSm_ > 1.0 ? pre_[1].read(preSm_) : dryR;
             for (auto& a : diff_[0]) inL = a.process(inL);
             for (auto& a : diff_[1]) inR = a.process(inR);
-            phase_ = wrap01(phase_ + 0.37 / sr_);
             double x[lines];
             for (int k = 0; k < lines; ++k) {
-                const double mod = modDepth * lfoSine(phase_ * (1.0 + 0.13 * k) + 0.125 * k);
+                // Each rate needs its own wrapped accumulator. Multiplying an
+                // already wrapped common phase caused a jump every 1/0.37 s.
+                phase_[std::size_t(k)] = wrap01(phase_[std::size_t(k)] + 0.37 * (1.0 + 0.13 * k) / sr_);
+                len_[k] += slew * (targetLen[k] - len_[k]);
+                const double mod = modDepth * lfoSine(phase_[std::size_t(k)] + 0.125 * k);
                 double v = dl_[k].read(std::max(4.0, len_[k] + mod));
-                v = damp_[k].low(v); v = hp_[k].high(v);
+                const double low = damp_[k].low(v);
+                if (m.legacyTimeFx || p[fx::rFreqB] > 0.0) v = low;
+                const double high = hp_[k].high(v);
+                if (m.legacyTimeFx || p[fx::rFreq] > 0.0) v = high;
                 x[k] = v;
             }
             // Householder-style orthogonal mix
@@ -361,11 +406,14 @@ public:
             outL *= 0.35; outR *= 0.35;
             const double mid = 0.5 * (outL + outR), side = 0.5 * (outL - outR) * (0.3 + 0.7 * width) / 1.0;
             outL = mid + side; outR = mid - side;
-            l[i] = dryL * (1.0 - 0.5 * wet) + outL * wet * 1.4; r[i] = dryR * (1.0 - 0.5 * wet) + outR * wet * 1.4;
+            const double dryGain = m.legacyTimeFx ? 1.0 - 0.5 * wet : 1.0 - wet;
+            l[i] = dryL * dryGain + outL * wet * 1.4; r[i] = dryR * dryGain + outR * wet * 1.4;
         }
     }
 private:
-    double sr_ = 44100.0, phase_ = 0.0;
+    double sr_ = 44100.0, preSm_ = -1.0;
+    std::array<double, lines> phase_ {};
+    bool fresh_ = true;
     DelayLine dl_[lines], pre_[2];
     DelayAllpass diff_[2][4];
     OnePole damp_[lines], hp_[lines];
@@ -378,7 +426,9 @@ public:
     void prepare(double sr) override { sr_ = sr; reset(); }
     void reset() noexcept override {
         for (auto& e : lin_) e = 0.0; for (auto& x : x1_) x.reset(); for (auto& x : x2_) x.reset();
-        inMs_ = outMs_ = 1.0e-9; agc_ = 1.0;
+        for (auto& x : lowAlign_) x.reset();
+        controlsFresh_ = true;
+        inMs_ = outMs_ = 1.0e-9; agc_ = 1.0; power_ = 0.0;
     }
     static double gainReductionDb(double levelDb, double thrDb, double ratio, double expand, double knee) noexcept {
         const double over = levelDb - thrDb;
@@ -394,61 +444,133 @@ public:
         if (levelDbIn > -70.0) return std::min(18.0, (thr - levelDbIn) * (1.0 - 1.0 / up));
         return 0.0;
     }
-    void process(const FxModule&, const double* p, double* l, double* r, int n) noexcept override {
-        const double at = std::exp(-1.0 / (std::max(p[fx::pAttack], 0.05) * 0.001 * sr_));
+    static double coherentLevelDb(double level, double thr, double down, double up) noexcept {
+        if (level >= thr) return -(level - thr) * (1.0 - 1.0 / down);
+        // Fade upward gain continuously out of silence instead of switching an
+        // 18 dB boost on/off at -70 dB. No signal is injected into silence.
+        const double t = clampd((level + 100.0) / 30.0, 0.0, 1.0);
+        return std::min(18.0, (thr - level) * (1.0 - 1.0 / up)) * t * t * (3.0 - 2.0 * t);
+    }
+    void process(const FxModule& module, const double* p, double* l, double* r, int n) noexcept override {
+        const bool multi = p[fx::pMultiband] > 0.5;
+        const double attackMs = multi && module.compressorBandAttackMs >= 0.0
+            ? clampd(module.compressorBandAttackMs, 0.05, 1000.0) : p[fx::pAttack];
+        const double at = std::exp(-1.0 / (std::max(attackMs, 0.05) * 0.001 * sr_));
         const double rl = std::exp(-1.0 / (std::max(p[fx::pRelease], 0.1) * 0.001 * sr_));
         const double wet = pct(p[fx::pWet]);
-        const bool multi = p[fx::pMultiband] > 0.5;
-        for (int c = 0; c < 2; ++c) { x1_[c].set(p[fx::pXoverLow], sr_); x2_[c].set(p[fx::pXoverHi], sr_); }
-        const double thr1 = -60.0 * clampd(p[fx::pThresh], 0.0, 1.0); // 0 = 0 dBFS (brickwall at full scale), 1 = -60 dB
+        const bool coherent = multi && module.phaseCoherentMultiband;
+        const bool calibrated = coherent && module.compressorGlobalControls;
+        const bool cubic = module.compressorCubicSingleBand && !multi;
+        for (int c = 0; c < 2; ++c) {
+            x1_[c].set(p[fx::pXoverLow], sr_); x2_[c].set(p[fx::pXoverHi], sr_);
+            if (coherent) lowAlign_[c].set(p[fx::pXoverHi], sr_);
+        }
+        const double thresholdControl = clampd(p[fx::pThresh], 0.0, 1.0);
+        const double inverse = 1.0 - thresholdControl;
+        const double thr1 = cubic ? gainToDb(3.3 * (inverse * inverse * inverse + 1.0e-6)) : -60.0 * thresholdControl;
         const double ratio1 = clampd(p[fx::pRatio], 1.0, 1000.0);
-        const double exp1 = clampd(1.0 / clampd(p[fx::pRatioBelow], 0.02, 1.0) - 1.0, 0.0, 30.0);
+        const double exp1 = module.compressorGlobalControls ? 0.0
+            : clampd(1.0 / clampd(p[fx::pRatioBelow], 0.02, 1.0) - 1.0, 0.0, 30.0);
+        double curveTargets[12] {};
         double bandThr[3], bandRatio[3], bandExp[3], bandGain[3];
         for (int b = 0; b < 3; ++b) {
             bandThr[b] = -60.0 + 60.0 * clampd(p[fx::pThreshUD0 + b] / 200.0, 0.0, 1.0);
             bandRatio[b] = 1.0 / (1.0 - clampd(p[fx::pRatio0 + b], 0.0, 0.995));
             bandExp[b] = 1.0 / (1.0 - clampd(p[fx::pRatioBelow0 + b], 0.0, 0.995));
             bandGain[b] = dbToGain(p[fx::pGain0 + b]);
+            if (calibrated) {
+                curveTargets[b] = compressorBandThreshold(thresholdControl, p[fx::pThreshUD0 + b]);
+                curveTargets[3 + b] = module.compressorBypassDown[std::size_t(b)] ? 0.0
+                    : (1.0 - 1.0 / ratio1) * clampd(p[fx::pRatio0 + b], 0.0, 1.0);
+                curveTargets[6 + b] = module.compressorBypassUp[std::size_t(b)] ? 0.0
+                    : clampd(p[fx::pRatioBelow], 0.0, 1.0) * (2.0 * clampd(p[fx::pRatioBelow0 + b], 0.0, 1.0) - 1.0);
+                curveTargets[9 + b] = clampd(module.compressorDeadbandDb[std::size_t(b)], 3.0, 24.0);
+            }
         }
-        // User makeup can only recover what the thresholds remove, so a preset cannot exceed 0 dBFS through it.
+        // Historical level cap retained only for the legacy native model.
         double capDb = 0.0;
         if (!multi) capDb = std::max(0.0, -thr1 * (1.0 - 1.0 / std::min(ratio1, 100.0)));
         else for (int b = 0; b < 3; ++b) capDb += std::max(0.0, -bandThr[b] * (1.0 - 1.0 / std::min(bandRatio[b], 100.0))) / 3.0;
-        const double makeup = dbToGain(std::min(gainToDb(clampd(p[fx::pMakeup], 1.0, 31.0)), std::min(capDb, 12.0)));
+        const bool affineMakeup = cubic || (coherent && module.compressorAffineMakeup);
+        const double makeup = affineMakeup ? (31.0 * clampd(p[fx::pMakeup], 1.0, 31.0) - 1.0) / 30.0
+            : coherent ? clampd(p[fx::pMakeup], 1.0, 31.0)
+            : dbToGain(std::min(gainToDb(clampd(p[fx::pMakeup], 1.0, 31.0)), std::min(capDb, 12.0)));
+        // Smooth explicit output controls without changing detector attack and
+        // release. First binding starts at the requested values, not a fade-in.
+        const double slew = 1.0 - std::exp(-1.0 / (0.002 * sr_));
+        const double targets[5] = {p[fx::pGain0], p[fx::pGain1], p[fx::pGain2], gainToDb(makeup), wet};
+        if (coherent && controlsFresh_) {
+            std::copy(std::begin(targets), std::end(targets), controls_);
+            std::copy(std::begin(curveTargets), std::end(curveTargets), curveControls_);
+            controlsFresh_ = false;
+        }
         // Slow loudness match: the compressor shapes dynamics, it does not change programme level.
         const double avg = std::exp(-1.0 / (0.4 * sr_));
         for (int i = 0; i < n; ++i) {
             const double dl = l[i], dr = r[i];
+            double dryL = dl, dryR = dr;
+            if (coherent) for (int k = 0; k < 5; ++k) controls_[k] += slew * (targets[k] - controls_[k]);
+            if (calibrated) for (int k = 0; k < 12; ++k) curveControls_[k] += slew * (curveTargets[k] - curveControls_[k]);
             double ol, orr;
             if (!multi) {
                 const double mag = std::max(std::abs(dl), std::abs(dr));
-                lin_[0] = mag > lin_[0] ? at * lin_[0] + (1.0 - at) * mag : rl * lin_[0] + (1.0 - rl) * mag;
-                const double g = dbToGain(-gainReductionDb(gainToDb(lin_[0]), thr1, ratio1, exp1, 6.0));
+                double detected;
+                if (cubic) {
+                    const double energy = mag * mag;
+                    const double coefficient = energy > power_ ? at : rl;
+                    power_ = coefficient * power_ + (1.0 - coefficient) * energy;
+                    detected = std::sqrt(std::max(0.0, power_));
+                } else {
+                    lin_[0] = mag > lin_[0] ? at * lin_[0] + (1.0 - at) * mag : rl * lin_[0] + (1.0 - rl) * mag;
+                    detected = lin_[0];
+                }
+                const double g = dbToGain(-gainReductionDb(gainToDb(detected), thr1, ratio1, exp1, 6.0));
                 ol = dl * g; orr = dr * g;
             } else {
                 double lo[2], mid[2], hi[2], out[2] = {0.0, 0.0};
                 const double in[2] = {dl, dr};
-                for (int c = 0; c < 2; ++c) { double rest; x1_[c].process(in[c], lo[c], rest); x2_[c].process(rest, mid[c], hi[c]); }
+                for (int c = 0; c < 2; ++c) {
+                    double rest; x1_[c].process(in[c], lo[c], rest); x2_[c].process(rest, mid[c], hi[c]);
+                    if (coherent) {
+                        // L1*A2 + H1*L2 + H1*H2 = A1*A2. Every band now
+                        // carries both LR4 allpass phases before recombination.
+                        double a, b; lowAlign_[c].process(lo[c], a, b); lo[c] = a + b;
+                    }
+                }
+                if (coherent && module.compressorPhaseMatchedDry) { dryL = lo[0] + mid[0] + hi[0]; dryR = lo[1] + mid[1] + hi[1]; }
                 for (int b = 0; b < 3; ++b) {
                     const double* band = b == 0 ? lo : (b == 1 ? mid : hi);
                     const double mag = std::max(std::abs(band[0]), std::abs(band[1]));
                     lin_[b] = mag > lin_[b] ? at * lin_[b] + (1.0 - at) * mag : rl * lin_[b] + (1.0 - rl) * mag;
-                    const double g = dbToGain(levelDb(gainToDb(lin_[b]), bandThr[b], bandRatio[b], bandExp[b])) * bandGain[b];
+                    const double detectedDb = gainToDb(lin_[b]);
+                    const double g = calibrated
+                        ? dbToGain(compressorBandGainDb(detectedDb, curveControls_[b], curveControls_[9 + b],
+                            curveControls_[3 + b], curveControls_[6 + b]) + controls_[b])
+                        : coherent
+                        ? dbToGain(coherentLevelDb(detectedDb, bandThr[b], bandRatio[b], bandExp[b]) + controls_[b])
+                        : dbToGain(levelDb(detectedDb, bandThr[b], bandRatio[b], bandExp[b])) * bandGain[b];
                     out[0] += band[0] * g; out[1] += band[1] * g;
                 }
                 ol = out[0]; orr = out[1];
             }
-            inMs_ = avg * inMs_ + (1.0 - avg) * 0.5 * (dl * dl + dr * dr);
-            outMs_ = avg * outMs_ + (1.0 - avg) * 0.5 * (ol * ol + orr * orr);
-            const double want = clampd(std::sqrt((inMs_ + 1.0e-12) / (outMs_ + 1.0e-12)), 0.2, 3.0);
-            agc_ += (1.0 - std::exp(-1.0 / (0.05 * sr_))) * (want - agc_);
-            ol *= agc_ * makeup; orr *= agc_ * makeup;
-            l[i] = lerp(dl, ol, wet); r[i] = lerp(dr, orr, wet);
+            if (!cubic && !coherent) {
+                inMs_ = avg * inMs_ + (1.0 - avg) * 0.5 * (dl * dl + dr * dr);
+                outMs_ = avg * outMs_ + (1.0 - avg) * 0.5 * (ol * ol + orr * orr);
+                const double want = clampd(std::sqrt((inMs_ + 1.0e-12) / (outMs_ + 1.0e-12)), 0.2, 3.0);
+                agc_ += (1.0 - std::exp(-1.0 / (0.05 * sr_))) * (want - agc_);
+            }
+            const double gain = coherent ? dbToGain(controls_[3]) : makeup * (cubic ? 1.0 : agc_);
+            ol *= gain; orr *= gain;
+            const double mix = coherent ? controls_[4] : wet;
+            l[i] = lerp(dryL, ol, mix); r[i] = lerp(dryR, orr, mix);
         }
     }
 private:
-    double sr_ = 44100.0, lin_[3] {}, inMs_ = 1.0e-9, outMs_ = 1.0e-9, agc_ = 1.0;
-    Crossover x1_[2], x2_[2];
+    double sr_ = 44100.0, lin_[3] {}, inMs_ = 1.0e-9, outMs_ = 1.0e-9, agc_ = 1.0, power_ = 0.0;
+    Crossover x1_[2], x2_[2], lowAlign_[2];
+    double controls_[5] {};
+    double curveControls_[12] {};
+    bool controlsFresh_ = true;
 };
 
 // ---------------------------------------------------------------- Convolution
@@ -612,13 +734,16 @@ public:
         double* io[2] = {l, r};
         double aux = 0.0;
         const double downFactor = 1.0 + drive * 40.0;
-        const double comp = 1.0 / std::sqrt(std::pow(10.0, drive * 1.8)); // half loudness compensation for drive
+        const double rangeDb = clampd(m.distortionDriveRangeDb, 0.0, 96.0);
+        const double inputGain = dbToGain(clampd(m.distortionInputGainDb, -96.0, 48.0) + (rangeDb - 36.0) * drive);
+        const double comp = dbToGain(-rangeDb * drive * clampd(m.distortionGainCompensation, 0.0, 1.0));
         for (int i = 0; i < n; ++i) {
             for (int c = 0; c < 2; ++c) {
                 const double dry = io[c][i];
                 dryHist_[c][std::size_t(dryW_ & 15)] = dry;
                 double x = dry;
                 if (filtered && pre) { const auto o = svf_[c].process(x); x = lp * o.low + (1.0 - lp) * o.high; }
+                x *= inputGain;
                 double y;
                 if (mode == 3) { // kDownsample: sample-rate and bit reduction
                     const int factor = std::max(1, int(downFactor));
@@ -646,11 +771,52 @@ private:
 };
 
 // ---------------------------------------------------------------- EQ
+struct ImportedEqBand {
+    Svf state[2];
+    std::array<double, 5> controls {}, targets {};
+    double slew = 1.0;
+    bool fresh = true;
+    void prepare(double sr) noexcept { slew = 1.0 - std::exp(-1.0 / (0.002 * sr)); reset(); }
+    void reset() noexcept { for (auto& s : state) s.reset(); fresh = true; }
+    void target(int mode, int band, double frequency, double resonance, double gainDb, double sr) noexcept {
+        const double q = importedEqQ(resonance, mode == 0);
+        const double A = mode == 2 ? 1.0 : std::pow(10.0, gainDb / 40.0);
+        double g = std::tan(pi * clampd(frequency, 5.0, sr * 0.49) / sr), k = 1.0 / q;
+        double m0 = 1.0, m1 = 0.0, m2 = 0.0;
+        if (mode == 0) {
+            if (band == 0) { g /= std::sqrt(A); m1 = k * (A - 1.0); m2 = A * A - 1.0; }
+            else { g *= std::sqrt(A); m0 = A * A; m1 = k * (1.0 - A) * A; m2 = 1.0 - A * A; }
+        } else if (mode == 1) { k /= A; m1 = k * (A * A - 1.0); }
+        else if (band == 0) { m1 = -k; m2 = -1.0; }
+        else { m0 = 0.0; m2 = 1.0; }
+        targets = {g, k, m0, m1, m2};
+        if (fresh) { controls = targets; fresh = false; }
+    }
+    void process(double& l, double& r) noexcept {
+        for (std::size_t i = 0; i < controls.size(); ++i) controls[i] += slew * (targets[i] - controls[i]);
+        const double g = controls[0], k = controls[1];
+        const double a1 = 1.0 / (1.0 + g * (g + k)), a2 = g * a1, a3 = g * a2;
+        double* channels[] = {&l, &r};
+        for (int c = 0; c < 2; ++c) {
+            auto& s = state[c]; s.g = g; s.k = k; s.a1 = a1; s.a2 = a2; s.a3 = a3;
+            const double input = *channels[c]; const auto out = s.process(input);
+            *channels[c] = controls[2] * input + controls[3] * out.band + controls[4] * out.low;
+        }
+    }
+};
 class EqUnit final : public FxUnit {
 public:
-    void prepare(double sr) override { sr_ = sr; reset(); }
-    void reset() noexcept override { for (auto& c : b_) for (auto& q : c) q.reset(); }
-    void process(const FxModule&, const double* p, double* l, double* r, int n) noexcept override {
+    void prepare(double sr) override { sr_ = sr; for (auto& b : imported_) b.prepare(sr); reset(); }
+    void reset() noexcept override { for (auto& c : b_) for (auto& q : c) q.reset(); for (auto& b : imported_) b.reset(); }
+    void process(const FxModule& module, const double* p, double* l, double* r, int n) noexcept override {
+        if (module.eqMeasuredModes) {
+            for (int band = 0; band < 2; ++band) {
+                const int mode = int(std::lround(clampd(p[fx::eType1 + band], 0.0, 2.0)));
+                imported_[band].target(mode, band, p[fx::eFreq1 + band], p[fx::eReso1 + band], p[fx::eGain1 + band], sr_);
+            }
+            for (int i = 0; i < n; ++i) { imported_[0].process(l[i], r[i]); imported_[1].process(l[i], r[i]); }
+            return;
+        }
         for (int c = 0; c < 2; ++c) {
             const double q1 = 0.3 + 6.0 * pct(p[fx::eReso1]), q2 = 0.3 + 6.0 * pct(p[fx::eReso2]);
             if (p[fx::eType1] < 1.5) b_[c][0].setPeaking(p[fx::eFreq1], q1, p[fx::eGain1], sr_); else b_[c][0].setLowShelf(p[fx::eFreq1], p[fx::eGain1], sr_);
@@ -662,7 +828,7 @@ public:
         }
     }
 private:
-    double sr_ = 44100.0; Biquad b_[2][2];
+    double sr_ = 44100.0; Biquad b_[2][2]; ImportedEqBand imported_[2];
 };
 
 // ---------------------------------------------------------------- Filter
@@ -969,8 +1135,13 @@ void FxEngine::processModule(int index, double* l, double* r, int n) noexcept {
         else if (std::size_t(k) < table.size()) {
             base = m.set[std::size_t(k)] ? m.p[std::size_t(k)] : table[std::size_t(k)].def;
             lo = table[std::size_t(k)].lo; hi = table[std::size_t(k)].hi;
+            if (m.fxType == FxType::comp && m.compressorGlobalControls && k == fx::pRatioBelow) lo = 0.0;
+            if (m.fxType == FxType::eq && m.eqMeasuredModes && (k == fx::eType1 || k == fx::eType2)) lo = 0.0;
         } else base = m.p[std::size_t(k)];
-        eff[k] = (k == fxLevelSlot || std::size_t(k) >= table.size())
+        const bool gridTime = m.fxType == FxType::delay && m.delayTimingModel == DelayTimingModel::fourthPowerBeatGrid
+                              && (k == fx::dTimeL || k == fx::dTimeR);
+        eff[k] = gridTime ? applyModulation(base, off[k], delayTimeControlRange)
+            : (k == fxLevelSlot || std::size_t(k) >= table.size())
             ? clampd(base + off[k], lo, hi)
             : applyModulation(base, off[k], ParamRange{lo, hi, fxParamIsLog(m.fxType, std::size_t(k))});
     }
@@ -990,14 +1161,20 @@ void FxEngine::processRange(int rack, int begin, int end, double* l, double* r, 
         const int bands = m.fxType == FxType::split3 ? 3 : 2;
         int counts[3] = {0, 0, 0};
         const double* off = offsets_.data() + std::size_t(idx) * fxParamSlots;
+        int total = 0;
         for (int b = 0; b < bands; ++b) {
             const auto slot = std::size_t(fx::sCount1 + b);
-            counts[b] = std::clamp(int(std::lround(m.set[slot] ? m.p[slot] : 0.0)), 0, 8);
+            const double requested = m.set[slot] ? m.p[slot] : 0.0;
+            const int count = std::isfinite(requested) ? int(std::lround(std::clamp(requested, 0.0, 8.0))) : 0;
+            // Every child span belongs to this parent, including malformed or
+            // truncated topology. Never consume a sibling outside its range.
+            counts[b] = std::min(count, end - i - 1 - total);
+            total += counts[b];
         }
-        int total = 0; for (int b = 0; b < bands; ++b) total += counts[b];
-        total = std::min(total, end - i - 1);
         const int splitAt = splitIndex_[std::size_t(idx)];
-        if (!m.enabled || splitAt < 0 || depth >= 2) { i += 1; continue; } // branches then run in series as plain modules
+        // Whole bypass retains the incoming stereo signal and skips the whole
+        // subtree. The bounded nesting/resource fallback is transparent too.
+        if (!m.enabled || splitAt < 0 || depth >= 2) { i += 1 + total; continue; }
         double* base = splitBuf_.data() + std::size_t(depth) * 6 * chunk;
         double* bl[3] = {base, base + 2 * chunk, base + 4 * chunk};
         double* br[3] = {base + chunk, base + 3 * chunk, base + 5 * chunk};
@@ -1027,7 +1204,11 @@ void FxEngine::processRange(int rack, int begin, int end, double* l, double* r, 
         }
         int cursor = i + 1;
         for (int b = 0; b < bands; ++b) {
-            processRange(rack, cursor, cursor + counts[b], bl[b], br[b], n, depth + 1);
+            const auto bypassSlot = std::size_t(fx::sBypass1 + b);
+            const double bypass = (m.set[bypassSlot] ? m.p[bypassSlot] : 0.0) + off[bypassSlot];
+            // Branch bypass bypasses its effects, not its split signal.
+            if (bypass <= 0.5)
+                processRange(rack, cursor, cursor + counts[b], bl[b], br[b], n, depth + 1);
             cursor += counts[b];
         }
         if (m.fxType == FxType::splitMS) {

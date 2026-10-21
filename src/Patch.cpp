@@ -1,11 +1,21 @@
 #include "Patch.h"
 #include "FxParams.h"
 #include "Wavetable.h"
+#include "SampleSerialization.h"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <sstream>
 
 namespace zyg {
+double filterCutoffHz(const Filter& f, double normalized) noexcept {
+    const double low = std::max(0.001, f.cutoffMinHz), high = std::max(low, f.cutoffMaxHz);
+    return std::min(low * std::pow(high / low, std::clamp(normalized, 0.0, 1.0)), std::max(low, f.cutoffCeilingHz));
+}
+double filterCutoffNormalized(const Filter& f, double hz) noexcept {
+    const double low = std::max(0.001, f.cutoffMinHz), high = std::max(low, f.cutoffMaxHz);
+    return high <= low ? 0.0 : std::clamp(std::log(std::max(low, hz) / low) / std::log(high / low), 0.0, 1.0);
+}
 namespace {
 // Embedded wavetable frames (tables without an asset path) are stored as base64 little-endian float32.
 constexpr char kB64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -156,6 +166,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(FxType, {{FxType::unknown, "unknown"}, {FxType::bod
     {FxType::conv, "conv"}, {FxType::delay, "delay"}, {FxType::distortion, "distortion"}, {FxType::eq, "eq"}, {FxType::filter, "filter"},
     {FxType::flanger, "flanger"}, {FxType::hyperD, "hyperD"}, {FxType::phaser, "phaser"}, {FxType::reverb, "reverb"}, {FxType::utils, "utils"},
     {FxType::split, "split"}, {FxType::split3, "split3"}, {FxType::splitMS, "splitMS"}, {FxType::pump, "pump"}, {FxType::stutter, "stutter"}})
+NLOHMANN_JSON_SERIALIZE_ENUM(DelayTimingModel, {{DelayTimingModel::seconds, "seconds"}, {DelayTimingModel::fourthPowerBeatGrid, "fourthPowerBeatGrid"}})
 NLOHMANN_JSON_SERIALIZE_ENUM(ModSource, {{ModSource::unknown, "unknown"}, {ModSource::envelope, "envelope"}, {ModSource::lfo, "lfo"},
     {ModSource::macro, "macro"}, {ModSource::velocity, "velocity"}, {ModSource::note, "note"}, {ModSource::modWheel, "modWheel"},
     {ModSource::channelPressure, "channelPressure"}, {ModSource::polyPressure, "polyPressure"}, {ModSource::noiseAudio, "noiseAudio"},
@@ -195,9 +206,13 @@ Json oscillatorToJson(const Oscillator& o) {
         {"enabled", o.enabled}, {"mode", oscModeToString(o.mode)}, {"modeId", o.modeId}, {"subShape", o.subShape},
         {"asset", o.asset}, {"tableName", o.tableName}, {"userSelectedAsset", o.userSelectedAsset}, {"octave", o.octave}, {"semitone", o.semitone},
         {"pitch", o.pitch}, {"unison", o.unison}, {"fine", o.fine}, {"volume", o.volume}, {"pan", o.pan}, {"detune", o.detune},
+        {"volumeModulationPower", o.volumeModulationPower}, {"detuneModulationPower", o.detuneModulationPower},
+        {"detuneExponent", o.detuneExponent}, {"detunePolarity", o.detunePolarity}, {"spreadUnisonPhase", o.spreadUnisonPhase},
         {"tablePosition", o.tablePosition}, {"initialPhase", o.initialPhase}, {"randomPhase", o.randomPhase},
+        {"interpolateFrames", o.interpolateFrames}, {"frameBinPosition", o.frameBinPosition},
         {"warpOne", o.warpOne}, {"warpTwo", o.warpTwo}, {"warpOneAmount", o.warpOneAmount}, {"warpTwoAmount", o.warpTwoAmount},
         {"warpDefinitions", Json::array({warpToJson(o.warpDefinitions[0]), warpToJson(o.warpDefinitions[1])})},
+        {"bandlimitedAudioModulation", o.bandlimitedAudioModulation},
         {"frameSize", o.frameSize}, {"sampleRate", o.sampleRate}, {"modeState", o.modeState}, {"additional", o.additional},
         {"blend", o.blend}, {"unisonStereo", o.unisonStereo}, {"unisonRange", o.unisonRange}, {"detuneMode", o.detuneMode},
         {"unisonStack", o.unisonStack}, {"unisonWTPos", o.unisonWTPos}, {"unisonWarp", o.unisonWarp}, {"unisonWarp2", o.unisonWarp2},
@@ -223,6 +238,8 @@ Json oscillatorToJson(const Oscillator& o) {
         {"sliceMarkers", o.sliceMarkers}, {"sliceRoot", o.sliceRoot}};
     // Tables with no asset path (Serum editor "Custom" tables) only exist inside the patch: keep their frames.
     if (o.mode == OscMode::wavetable && o.asset.empty() && !o.audio.empty()) j["embeddedFrames"] = encodeFrames(o.audio);
+    if ((o.mode == OscMode::sample || o.mode == OscMode::granular || o.mode == OscMode::spectral)
+        && o.asset.empty() && o.sample) j["embeddedSample"] = embeddedSampleToJson(*o.sample);
     return j;
 }
 void oscillatorFromJson(const Json& j, Oscillator& o) {
@@ -232,8 +249,12 @@ void oscillatorFromJson(const Json& j, Oscillator& o) {
     rd(j, "modeId", o.modeId); rd(j, "subShape", o.subShape); rd(j, "asset", o.asset); rd(j, "tableName", o.tableName); rd(j, "userSelectedAsset", o.userSelectedAsset);
     rd(j, "octave", o.octave); rd(j, "semitone", o.semitone); rd(j, "pitch", o.pitch); rd(j, "unison", o.unison); rd(j, "fine", o.fine);
     rd(j, "volume", o.volume); rd(j, "pan", o.pan); rd(j, "detune", o.detune); rd(j, "tablePosition", o.tablePosition);
+    rd(j, "interpolateFrames", o.interpolateFrames); rd(j, "frameBinPosition", o.frameBinPosition);
+    rd(j, "volumeModulationPower", o.volumeModulationPower); rd(j, "detuneModulationPower", o.detuneModulationPower);
+    rd(j, "detuneExponent", o.detuneExponent); rd(j, "detunePolarity", o.detunePolarity); rd(j, "spreadUnisonPhase", o.spreadUnisonPhase);
     rd(j, "initialPhase", o.initialPhase); rd(j, "randomPhase", o.randomPhase); rd(j, "warpOne", o.warpOne); rd(j, "warpTwo", o.warpTwo);
     rd(j, "warpOneAmount", o.warpOneAmount); rd(j, "warpTwoAmount", o.warpTwoAmount);
+    o.bandlimitedAudioModulation = j.value("bandlimitedAudioModulation", false);
     if (j.contains("warpDefinitions") && j["warpDefinitions"].is_array())
         for (std::size_t i = 0; i < o.warpDefinitions.size() && i < j["warpDefinitions"].size(); ++i) warpFromJson(j["warpDefinitions"][i], o.warpDefinitions[i]);
     rd(j, "frameSize", o.frameSize); rd(j, "sampleRate", o.sampleRate);
@@ -268,16 +289,22 @@ void oscillatorFromJson(const Json& j, Oscillator& o) {
     rd(j, "phaseLock", o.phaseLock); rd(j, "keepTransients", o.keepTransients); rd(j, "specFilterShift", o.specFilterShift);
     rd(j, "specFilterWet", o.specFilterWet); rd(j, "slicingMode", o.slicingMode); rd(j, "baseTempo", o.baseTempo);
     rd(j, "sliceMarkers", o.sliceMarkers); rd(j, "sliceRoot", o.sliceRoot);
+    if (j.contains("embeddedSample")) {
+        o.sample = embeddedSampleFromJson(j["embeddedSample"]);
+        o.asset.clear(); // Inline audio takes priority; external paths stay in provenance.
+    }
 }
 
 Json filterToJson(const Filter& f) {
     return Json{{"enabled", f.enabled}, {"type", f.type}, {"response", f.response}, {"variant", f.variant}, {"cutoff", f.cutoff},
+                {"cutoffMinHz", f.cutoffMinHz}, {"cutoffMaxHz", f.cutoffMaxHz}, {"cutoffCeilingHz", f.cutoffCeilingHz},
                 {"resonance", f.resonance}, {"drive", f.drive}, {"var", f.var}, {"wet", f.wet}, {"level", f.level}, {"stereo", f.stereo},
                 {"x", f.x}, {"y", f.y}, {"keyTrack", f.keyTrack}, {"pad", f.pad}, {"additional", f.additional}};
 }
 void filterFromJson(const Json& j, Filter& f) {
     if (!j.is_object()) return;
     rd(j, "enabled", f.enabled); rd(j, "type", f.type); rd(j, "response", f.response); rd(j, "variant", f.variant); rd(j, "cutoff", f.cutoff);
+    rd(j, "cutoffMinHz", f.cutoffMinHz); rd(j, "cutoffMaxHz", f.cutoffMaxHz); rd(j, "cutoffCeilingHz", f.cutoffCeilingHz);
     rd(j, "resonance", f.resonance); rd(j, "drive", f.drive); rd(j, "var", f.var); rd(j, "wet", f.wet); rd(j, "level", f.level);
     rd(j, "stereo", f.stereo); rd(j, "x", f.x); rd(j, "y", f.y); rd(j, "keyTrack", f.keyTrack); rd(j, "pad", f.pad);
     f.additional = j.value("additional", Json{});
@@ -299,11 +326,13 @@ void routeFromJson(const Json& j, Route& r) {
 }
 Json envelopeToJson(const Envelope& e) {
     return Json{{"attack", e.attack}, {"hold", e.hold}, {"decay", e.decay}, {"sustain", e.sustain}, {"release", e.release},
-                {"curve", e.curve}, {"start", e.start}, {"end", e.end}, {"legatoInverted", e.legatoInverted}, {"restartOnSteal", e.restartOnSteal}, {"additional", e.additional}};
+                {"tempoSync", e.tempoSync}, {"exponentialCurves", e.exponentialCurves}, {"curve", e.curve}, {"start", e.start}, {"end", e.end}, {"legatoInverted", e.legatoInverted}, {"restartOnSteal", e.restartOnSteal}, {"additional", e.additional}};
 }
 void envelopeFromJson(const Json& j, Envelope& e) {
     if (!j.is_object()) return;
     rd(j, "attack", e.attack); rd(j, "hold", e.hold); rd(j, "decay", e.decay); rd(j, "sustain", e.sustain); rd(j, "release", e.release);
+    rd(j, "tempoSync", e.tempoSync);
+    rd(j, "exponentialCurves", e.exponentialCurves);
     rd(j, "curve", e.curve); rd(j, "start", e.start); rd(j, "end", e.end); rd(j, "legatoInverted", e.legatoInverted); rd(j, "restartOnSteal", e.restartOnSteal);
     e.additional = j.value("additional", Json{});
 }
@@ -352,17 +381,48 @@ Json fxToJson(const FxModule& m) {
     Json set = Json::array(); for (bool b : m.set) set.push_back(b);
     return Json{{"type", m.type}, {"fxType", m.fxType}, {"rack", m.rack}, {"position", m.position}, {"enabled", m.enabled},
                 {"parameters", m.parameters}, {"additional", m.additional}, {"p", m.p}, {"set", set}, {"filterResponse", m.filterResponse},
-                {"filterVariant", m.filterVariant}, {"modeVariant", m.modeVariant}, {"impulsePath", m.impulsePath}};
+                {"filterVariant", m.filterVariant}, {"modeVariant", m.modeVariant}, {"impulsePath", m.impulsePath},
+                {"eqMeasuredModes", m.eqMeasuredModes},
+                {"compressorCubicSingleBand", m.compressorCubicSingleBand},
+                {"compressorGlobalControls", m.compressorGlobalControls},
+                {"compressorAffineMakeup", m.compressorAffineMakeup}, {"compressorPhaseMatchedDry", m.compressorPhaseMatchedDry},
+                {"compressorBandAttackMs", m.compressorBandAttackMs},
+                {"compressorDeadbandDb", m.compressorDeadbandDb},
+                {"compressorBypassUp", m.compressorBypassUp}, {"compressorBypassDown", m.compressorBypassDown},
+                {"phaseCoherentMultiband", m.phaseCoherentMultiband}, {"legacyTimeFx", m.legacyTimeFx},
+                {"delayTimingModel", m.delayTimingModel},
+                {"distortionInputGainDb", m.distortionInputGainDb}, {"distortionDriveRangeDb", m.distortionDriveRangeDb},
+                {"distortionGainCompensation", m.distortionGainCompensation}};
 }
 FxModule fxFromJson(const Json& j) {
     FxModule m;
     rd(j, "type", m.type); rd(j, "fxType", m.fxType); rd(j, "rack", m.rack); rd(j, "position", m.position); rd(j, "enabled", m.enabled);
     m.parameters = j.value("parameters", Json{}); m.additional = j.value("additional", Json{});
     rd(j, "p", m.p); rd(j, "filterResponse", m.filterResponse); rd(j, "filterVariant", m.filterVariant); rd(j, "modeVariant", m.modeVariant);
+    rd(j, "eqMeasuredModes", m.eqMeasuredModes);
+    rd(j, "distortionInputGainDb", m.distortionInputGainDb); rd(j, "distortionDriveRangeDb", m.distortionDriveRangeDb);
+    rd(j, "compressorCubicSingleBand", m.compressorCubicSingleBand);
+    rd(j, "compressorGlobalControls", m.compressorGlobalControls);
+    rd(j, "compressorAffineMakeup", m.compressorAffineMakeup); rd(j, "compressorPhaseMatchedDry", m.compressorPhaseMatchedDry);
+    rd(j, "compressorBandAttackMs", m.compressorBandAttackMs);
+    rd(j, "compressorDeadbandDb", m.compressorDeadbandDb);
+    rd(j, "compressorBypassUp", m.compressorBypassUp); rd(j, "compressorBypassDown", m.compressorBypassDown);
+    m.phaseCoherentMultiband = j.value("phaseCoherentMultiband", false);
+    m.legacyTimeFx = j.value("legacyTimeFx", true);
+    rd(j, "delayTimingModel", m.delayTimingModel);
+    rd(j, "distortionGainCompensation", m.distortionGainCompensation);
     rd(j, "impulsePath", m.impulsePath);
     if (j.contains("set") && j["set"].is_array())
         for (std::size_t i = 0; i < m.set.size() && i < j["set"].size(); ++i) m.set[i] = j["set"][i].is_boolean() && j["set"][i].get<bool>();
     if (m.fxType == FxType::unknown && !m.type.empty()) m.fxType = fxTypeFromSerum(m.type);
+    if (m.legacyTimeFx && m.fxType == FxType::reverb) {
+        // Bake the historical defaults so a new default table cannot change
+        // older native projects whose slots were left implicit.
+        constexpr double old[] = {30, 50, 70, 50, 50, 50, 0.02, 50, 50, 50, 25, 80};
+        for (std::size_t k = 0; k < std::size(old); ++k) if (!m.set[k]) {
+            m.p[k] = old[k]; m.set[k] = true;
+        }
+    }
     return m;
 }
 Json globalsToJson(const GlobalState& g) {
@@ -370,8 +430,10 @@ Json globalsToJson(const GlobalState& g) {
                 {"fxBus2Dest", g.fxBus2Dest}, {"portamentoTime", g.portamentoTime}, {"portamentoCurve", g.portamentoCurve},
                 {"portaAlways", g.portaAlways}, {"portaScaled", g.portaScaled}, {"legato", g.legato}, {"bendUp", g.bendUp},
                 {"bendDown", g.bendDown}, {"priority", g.priority}, {"masterTuning", g.masterTuning}, {"transpose", g.transpose},
-                {"swing", g.swing}, {"oversampling", g.oversampling}, {"noteLatch", g.noteLatch}, {"limitSameNote", g.limitSameNote},
+                {"swing", g.swing}, {"oversampling", g.oversampling}, {"tightOutputDecimator", g.tightOutputDecimator}, {"noteLatch", g.noteLatch}, {"limitSameNote", g.limitSameNote},
                 {"voiceAmp", g.voiceAmp}, {"modWheel", g.modWheel}, {"velocityAmpDepth", g.velocityAmpDepth},
+                {"masterModulationPower", g.masterModulationPower},
+                {"outputGain", g.outputGain}, {"masterAfterEffects", g.masterAfterEffects},
                 {"envTimeScale", g.envTimeScale}, {"lfoTimeScale", g.lfoTimeScale}, {"pitchQuantizerKey", g.pitchQuantizerKey},
                 {"pitchQuantizerScale", g.pitchQuantizerScale}, {"pitchQuantizerMask", g.pitchQuantizerMask},
                 {"midiOutClipPlayer", g.midiOutClipPlayer}, {"mpeEnabled", g.mpeEnabled}, {"mpePitchBendRange", g.mpePitchBendRange},
@@ -385,7 +447,10 @@ void globalsFromJson(const Json& j, GlobalState& g) {
     rd(j, "portaAlways", g.portaAlways); rd(j, "portaScaled", g.portaScaled); rd(j, "legato", g.legato); rd(j, "bendUp", g.bendUp);
     rd(j, "bendDown", g.bendDown); rd(j, "priority", g.priority); rd(j, "masterTuning", g.masterTuning); rd(j, "transpose", g.transpose);
     rd(j, "swing", g.swing); rd(j, "oversampling", g.oversampling); rd(j, "noteLatch", g.noteLatch); rd(j, "limitSameNote", g.limitSameNote);
+    g.tightOutputDecimator = j.value("tightOutputDecimator", false);
     rd(j, "voiceAmp", g.voiceAmp); rd(j, "modWheel", g.modWheel); rd(j, "velocityAmpDepth", g.velocityAmpDepth);
+    rd(j, "masterModulationPower", g.masterModulationPower);
+    rd(j, "outputGain", g.outputGain); rd(j, "masterAfterEffects", g.masterAfterEffects);
     rd(j, "envTimeScale", g.envTimeScale); rd(j, "lfoTimeScale", g.lfoTimeScale); rd(j, "pitchQuantizerKey", g.pitchQuantizerKey);
     rd(j, "pitchQuantizerScale", g.pitchQuantizerScale); rd(j, "pitchQuantizerMask", g.pitchQuantizerMask);
     rd(j, "midiOutClipPlayer", g.midiOutClipPlayer); rd(j, "mpeEnabled", g.mpeEnabled); rd(j, "mpePitchBendRange", g.mpePitchBendRange);
@@ -475,6 +540,8 @@ Json patchToJson(const Patch& patch) {
         {"masterVolume", patch.masterVolume}, {"mono", patch.mono}, {"polyphony", patch.polyphony},
         {"lfoOneRateHz", patch.lfoOneRateHz}, {"lfoOneSine", patch.lfoOneSine},
         {"oscillators", oscillators}, {"filters", filters}, {"routes", routes}, {"envelopes", envelopes},
+        {"velocityCurve", curveToJson(patch.velocityCurve)}, {"noteCurve", curveToJson(patch.noteCurve)},
+        {"quantizeVelocityCurve", patch.quantizeVelocityCurve},
         {"modulation", modulation}, {"fx", fx}, {"lfos", patch.lfos}, {"lfoDefinitions", lfoDefinitions}, {"macros", patch.macros},
         {"macroValues", patch.macroValues}, {"arp", patch.arp}, {"clips", patch.clips}, {"global", patch.global},
         {"arpClips", patch.arpClips}, {"midiClips", patch.midiClips},
@@ -488,6 +555,8 @@ Json patchToJson(const Patch& patch) {
 
 Patch patchFromJson(const Json& json) {
     Patch patch;
+    // Legacy native files may omit the entire globals object.
+    patch.globals.tightOutputDecimator = false;
     if (!json.is_object()) return patch;
     patch.name = json.value("name", std::string{"Untitled"});
     rd(json, "author", patch.author); rd(json, "serumVersion", patch.serumVersion); rd(json, "sourcePath", patch.sourcePath);
@@ -502,6 +571,9 @@ Patch patchFromJson(const Json& json) {
     readArray("filters", patch.filters, filterFromJson);
     readArray("routes", patch.routes, routeFromJson);
     readArray("envelopes", patch.envelopes, envelopeFromJson);
+    if (json.contains("velocityCurve")) patch.velocityCurve = curveFromJson(json["velocityCurve"]);
+    if (json.contains("noteCurve")) patch.noteCurve = curveFromJson(json["noteCurve"]);
+    rd(json, "quantizeVelocityCurve", patch.quantizeVelocityCurve);
     readArray("lfoDefinitions", patch.lfoDefinitions, lfoFromJson);
     if (json.contains("modulation") && json.at("modulation").is_array())
         for (const auto& j : json.at("modulation")) patch.modulation.push_back(modulationFromJson(j));
@@ -601,7 +673,13 @@ ParamRange globalParamRange(GlobalParam p) noexcept {
 }
 double applyModulation(double base, double d, const ParamRange& r) noexcept {
     if (d == 0.0) return base;
-    if (!r.log) return std::min(r.hi, std::max(r.lo, base + d * (r.hi - r.lo)));
+    if (!r.log) {
+        if (r.power > 0.0 && r.power != 1.0 && r.hi > r.lo) {
+            const double norm = std::pow(std::clamp((base - r.lo) / (r.hi - r.lo), 0.0, 1.0), 1.0 / r.power);
+            return r.lo + (r.hi - r.lo) * std::pow(std::clamp(norm + d, 0.0, 1.0), r.power);
+        }
+        return std::min(r.hi, std::max(r.lo, base + d * (r.hi - r.lo)));
+    }
     const double floor = std::max(r.lo, r.hi * 1.0e-4);
     const double norm = base <= floor ? 0.0 : std::log(base / floor) / std::log(r.hi / floor);
     const double moved = std::min(1.0, std::max(0.0, norm + d));

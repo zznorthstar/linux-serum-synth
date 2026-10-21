@@ -28,6 +28,11 @@ std::shared_ptr<const ConvIr> buildConvIr(const SampleData& ir, double maxSecond
 
 namespace zyg::dsp {
 
+inline constexpr double maxDelaySeconds = 32.0;
+inline constexpr ParamRange delayTimeControlRange {0.001, 0.501, false, 4.0};
+double delayGridBeats(double physicalTime) noexcept;
+std::array<double, 2> delayTimeTargets(const FxModule& module, const double* parameters, double bpm) noexcept;
+
 // Per-chunk host/engine context shared with tempo- and sidechain-aware units.
 struct FxContext {
     double bpm = 120.0;

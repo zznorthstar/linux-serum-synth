@@ -1,0 +1,482 @@
+{
+  "schema": "zygzxg-native-quality-summary-1",
+  "date": "2026-10-19",
+  "scope": "Original synthetic multitone, DC transfer and coherent audio-rate PM; no reference assets",
+  "method": {
+    "crossover": "18 simultaneous sine tones, 40 Hz to 20 kHz, 4 seconds, analyze final 1 second; 2 crossover pairs x 3 mixes x 3 rates",
+    "dynamics": "constant stereo input, 4-second settle, neutral makeup plus 4:1 downward / upward off / -30 dB threshold",
+    "aliasing": "32768 coherent samples after 2048 warmup; original sine carrier 3077.6367 Hz, audio-rate sine modulator 4879.3945 Hz, PM depth .25 cycles; energy outside physical in-band carrier +/- integer modulator bins",
+    "limitations": "Aliasing fixture is one PM case, not a whole-engine quality score. Legitimate-bin amplitude/phase error, nonlinear filters/FX, unison/state changes and perceived quality are not certified."
+  },
+  "legacyMultibandMatchesBaselineExactly": true,
+  "crossovers": [
+    {
+      "sampleRate": 44100.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 0.0,
+      "beforeSpreadDb": 1.0002968810560918e-11,
+      "afterSpreadDb": 1.0309624944924998e-11,
+      "beforeMaxAbsGainDb": 8.188104518507821e-12,
+      "afterMaxAbsGainDb": 8.359754807554469e-12
+    },
+    {
+      "sampleRate": 44100.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 50.0,
+      "beforeSpreadDb": 25.037956833661934,
+      "afterSpreadDb": 1.0309624944924998e-11,
+      "beforeMaxAbsGainDb": 25.03984806876822,
+      "afterMaxAbsGainDb": 8.359754807554469e-12
+    },
+    {
+      "sampleRate": 44100.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 100.0,
+      "beforeSpreadDb": 0.06547832766208311,
+      "afterSpreadDb": 1.0309624944924998e-11,
+      "beforeMaxAbsGainDb": 0.05493772215198976,
+      "afterMaxAbsGainDb": 8.359754807554469e-12
+    },
+    {
+      "sampleRate": 44100.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 0.0,
+      "beforeSpreadDb": 1.0002968810560918e-11,
+      "afterSpreadDb": 1.356133716214138e-11,
+      "beforeMaxAbsGainDb": 8.188104518507821e-12,
+      "afterMaxAbsGainDb": 8.384827321684878e-12
+    },
+    {
+      "sampleRate": 44100.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 50.0,
+      "beforeSpreadDb": 17.946278857246774,
+      "afterSpreadDb": 1.356133716214138e-11,
+      "beforeMaxAbsGainDb": 17.78209944980659,
+      "afterMaxAbsGainDb": 8.384827321684878e-12
+    },
+    {
+      "sampleRate": 44100.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 100.0,
+      "beforeSpreadDb": 2.7399765954800093,
+      "afterSpreadDb": 1.356133716214138e-11,
+      "beforeMaxAbsGainDb": 2.403766883697846,
+      "afterMaxAbsGainDb": 8.384827321684878e-12
+    },
+    {
+      "sampleRate": 48000.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 0.0,
+      "beforeSpreadDb": 7.19195424555455e-12,
+      "afterSpreadDb": 5.679888777998649e-12,
+      "beforeMaxAbsGainDb": 3.758948464625526e-12,
+      "afterMaxAbsGainDb": 3.164922745227312e-12
+    },
+    {
+      "sampleRate": 48000.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 50.0,
+      "beforeSpreadDb": 25.0108064377309,
+      "afterSpreadDb": 5.679888777998649e-12,
+      "beforeMaxAbsGainDb": 25.025424554988263,
+      "afterMaxAbsGainDb": 3.164922745227312e-12
+    },
+    {
+      "sampleRate": 48000.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 100.0,
+      "beforeSpreadDb": 0.0656982538351411,
+      "afterSpreadDb": 5.679888777998649e-12,
+      "beforeMaxAbsGainDb": 0.05512197668099053,
+      "afterMaxAbsGainDb": 3.164922745227312e-12
+    },
+    {
+      "sampleRate": 48000.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 0.0,
+      "beforeSpreadDb": 7.19195424555455e-12,
+      "afterSpreadDb": 5.712675911861239e-12,
+      "beforeMaxAbsGainDb": 3.758948464625526e-12,
+      "afterMaxAbsGainDb": 3.5159379430525735e-12
+    },
+    {
+      "sampleRate": 48000.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 50.0,
+      "beforeSpreadDb": 18.057997358781186,
+      "afterSpreadDb": 5.712675911861239e-12,
+      "beforeMaxAbsGainDb": 17.90349736860318,
+      "afterMaxAbsGainDb": 3.5159379430525735e-12
+    },
+    {
+      "sampleRate": 48000.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 100.0,
+      "beforeSpreadDb": 2.7434207852628294,
+      "afterSpreadDb": 5.712675911861239e-12,
+      "beforeMaxAbsGainDb": 2.4066745659654685,
+      "afterMaxAbsGainDb": 3.5159379430525735e-12
+    },
+    {
+      "sampleRate": 96000.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 0.0,
+      "beforeSpreadDb": 5.4773800100221056e-12,
+      "afterSpreadDb": 7.2237770519507775e-12,
+      "beforeMaxAbsGainDb": 3.6335858939720256e-12,
+      "afterMaxAbsGainDb": 3.736768932894791e-12
+    },
+    {
+      "sampleRate": 96000.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 50.0,
+      "beforeSpreadDb": 24.918744783072817,
+      "afterSpreadDb": 7.2237770519507775e-12,
+      "beforeMaxAbsGainDb": 24.967198108483686,
+      "afterMaxAbsGainDb": 3.736768932894791e-12
+    },
+    {
+      "sampleRate": 96000.0,
+      "lowHz": 200.0,
+      "highHz": 2500.0,
+      "wetPct": 100.0,
+      "beforeSpreadDb": 0.06659359545068919,
+      "afterSpreadDb": 7.2237770519507775e-12,
+      "beforeMaxAbsGainDb": 0.05587215608722193,
+      "afterMaxAbsGainDb": 3.736768932894791e-12
+    },
+    {
+      "sampleRate": 96000.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 0.0,
+      "beforeSpreadDb": 5.4773800100221056e-12,
+      "afterSpreadDb": 5.233405160983919e-12,
+      "beforeMaxAbsGainDb": 3.6335858939720256e-12,
+      "afterMaxAbsGainDb": 3.8939543099413e-12
+    },
+    {
+      "sampleRate": 96000.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 50.0,
+      "beforeSpreadDb": 18.561869587874334,
+      "afterSpreadDb": 5.233405160983919e-12,
+      "beforeMaxAbsGainDb": 18.412498951712315,
+      "afterMaxAbsGainDb": 3.8939543099413e-12
+    },
+    {
+      "sampleRate": 96000.0,
+      "lowHz": 800.0,
+      "highHz": 1600.0,
+      "wetPct": 100.0,
+      "beforeSpreadDb": 2.7574158960010475,
+      "afterSpreadDb": 5.233405160983919e-12,
+      "beforeMaxAbsGainDb": 2.418480816484378,
+      "afterMaxAbsGainDb": 3.8939543099413e-12
+    }
+  ],
+  "dynamicsBefore": [
+    {
+      "measuredMakeupDb": 1.2733291454280982e-06,
+      "requestedMakeupDb": 6.020599913279624,
+      "sampleRate": 44100.0,
+      "steadyDcTransfer": [
+        {
+          "expectedOutputDb": -40.0,
+          "inputDb": -40.0,
+          "outputDb": -39.99999872667092
+        },
+        {
+          "expectedOutputDb": -27.5,
+          "inputDb": -20.0,
+          "outputDb": -20.00002061388875
+        },
+        {
+          "expectedOutputDb": -24.0,
+          "inputDb": -6.0,
+          "outputDb": -14.457574905607427
+        }
+      ]
+    },
+    {
+      "measuredMakeupDb": 1.2733520038430144e-06,
+      "requestedMakeupDb": 6.020599913279624,
+      "sampleRate": 48000.0,
+      "steadyDcTransfer": [
+        {
+          "expectedOutputDb": -40.0,
+          "inputDb": -40.0,
+          "outputDb": -39.99999872664983
+        },
+        {
+          "expectedOutputDb": -27.5,
+          "inputDb": -20.0,
+          "outputDb": -20.000020616337064
+        },
+        {
+          "expectedOutputDb": -24.0,
+          "inputDb": -6.0,
+          "outputDb": -14.457574905607979
+        }
+      ]
+    },
+    {
+      "measuredMakeupDb": 1.2734441549622083e-06,
+      "requestedMakeupDb": 6.020599913279624,
+      "sampleRate": 96000.0,
+      "steadyDcTransfer": [
+        {
+          "expectedOutputDb": -40.0,
+          "inputDb": -40.0,
+          "outputDb": -39.999998726556704
+        },
+        {
+          "expectedOutputDb": -27.5,
+          "inputDb": -20.0,
+          "outputDb": -20.000020630495555
+        },
+        {
+          "expectedOutputDb": -24.0,
+          "inputDb": -6.0,
+          "outputDb": -14.45757490561139
+        }
+      ]
+    }
+  ],
+  "dynamicsAfter": [
+    {
+      "measuredMakeupDb": 6.020599913279598,
+      "requestedMakeupDb": 6.020599913279624,
+      "sampleRate": 44100.0,
+      "steadyDcTransfer": [
+        {
+          "expectedOutputDb": -40.0,
+          "inputDb": -40.0,
+          "outputDb": -40.00000000000004
+        },
+        {
+          "expectedOutputDb": -27.5,
+          "inputDb": -20.0,
+          "outputDb": -27.499999999999908
+        },
+        {
+          "expectedOutputDb": -24.0,
+          "inputDb": -6.0,
+          "outputDb": -23.99999999999927
+        }
+      ]
+    },
+    {
+      "measuredMakeupDb": 6.020599913279614,
+      "requestedMakeupDb": 6.020599913279624,
+      "sampleRate": 48000.0,
+      "steadyDcTransfer": [
+        {
+          "expectedOutputDb": -40.0,
+          "inputDb": -40.0,
+          "outputDb": -40.00000000000191
+        },
+        {
+          "expectedOutputDb": -27.5,
+          "inputDb": -20.0,
+          "outputDb": -27.499999999999805
+        },
+        {
+          "expectedOutputDb": -24.0,
+          "inputDb": -6.0,
+          "outputDb": -23.999999999999698
+        }
+      ]
+    },
+    {
+      "measuredMakeupDb": 6.020599913274145,
+      "requestedMakeupDb": 6.020599913279624,
+      "sampleRate": 96000.0,
+      "steadyDcTransfer": [
+        {
+          "expectedOutputDb": -40.0,
+          "inputDb": -40.0,
+          "outputDb": -40.00000000000646
+        },
+        {
+          "expectedOutputDb": -27.5,
+          "inputDb": -20.0,
+          "outputDb": -27.500000000001226
+        },
+        {
+          "expectedOutputDb": -24.0,
+          "inputDb": -6.0,
+          "outputDb": -24.000000000001393
+        }
+      ]
+    }
+  ],
+  "filterWarpAfter": [
+    {
+      "cutoffHz": 1000,
+      "expectedGainDb": -3.010299956639812,
+      "gainDb": -3.0100344014270872,
+      "inputHz": 1000,
+      "oversampling": 2,
+      "sampleRate": 44100.0
+    },
+    {
+      "cutoffHz": 1000,
+      "expectedGainDb": -3.010299956639812,
+      "gainDb": -3.009939456846738,
+      "inputHz": 1000,
+      "oversampling": 4,
+      "sampleRate": 44100.0
+    },
+    {
+      "cutoffHz": 1000,
+      "expectedGainDb": -3.010299956639812,
+      "gainDb": -3.0100580736815656,
+      "inputHz": 1000,
+      "oversampling": 2,
+      "sampleRate": 48000.0
+    },
+    {
+      "cutoffHz": 1000,
+      "expectedGainDb": -3.010299956639812,
+      "gainDb": -3.009976425416757,
+      "inputHz": 1000,
+      "oversampling": 4,
+      "sampleRate": 48000.0
+    },
+    {
+      "cutoffHz": 1000,
+      "expectedGainDb": -3.010299956639812,
+      "gainDb": -3.0102184495787636,
+      "inputHz": 1000,
+      "oversampling": 2,
+      "sampleRate": 96000.0
+    },
+    {
+      "cutoffHz": 1000,
+      "expectedGainDb": -3.010299956639812,
+      "gainDb": -3.0101964913524397,
+      "inputHz": 1000,
+      "oversampling": 4,
+      "sampleRate": 96000.0
+    }
+  ],
+  "audioRatePhaseModulation": [
+    {
+      "carrierHz": 3077.63671875,
+      "modulatorHz": 4879.39453125,
+      "nonPhysicalBinEnergyDb": -57.7200348468395,
+      "oversampling": 2,
+      "phaseDepthCycles": 0.25,
+      "sampleRate": 48000.0
+    },
+    {
+      "carrierHz": 3077.63671875,
+      "modulatorHz": 4879.39453125,
+      "nonPhysicalBinEnergyDb": -58.34040239862729,
+      "oversampling": 4,
+      "phaseDepthCycles": 0.25,
+      "sampleRate": 48000.0
+    }
+  ],
+  "retainedReferenceMultiband": {
+    "referenceVersion": "Serum 2.1.5",
+    "host": "REAPER 7.82/x64",
+    "signal": "original embedded sine; input volume scales, no factory assets",
+    "note": 60,
+    "velocity": 127,
+    "bpm": 120,
+    "sampleRate": 48000,
+    "holdSeconds": 4,
+    "renderSeconds": 5,
+    "analysisSeconds": [
+      2,
+      3.5
+    ],
+    "limitations": "Sparse defaults only; 0.1 input previously had a closer incidental RMS match from AGC. Explicit band curves, deadbands, detector timing and compensated-wet semantics remain uncalibrated.",
+    "results": [
+      {
+        "input": "0.001",
+        "referenceRms": 0.00025010848651069964,
+        "beforeRms": 0.00030789898394818115,
+        "afterRms": 0.0002497216869173499,
+        "beforeDeltaDb": 1.8055965517961896,
+        "afterDeltaDb": -0.013443363082737301
+      },
+      {
+        "input": "0.01",
+        "referenceRms": 0.00250108303991868,
+        "beforeRms": 0.002495900836904416,
+        "afterRms": 0.0024972168689504056,
+        "beforeDeltaDb": -0.018015691349192137,
+        "afterDeltaDb": -0.01343702525329235
+      },
+      {
+        "input": "0.1",
+        "referenceRms": 0.025010833637508945,
+        "beforeRms": 0.02494961298890109,
+        "afterRms": 0.021553334258932914,
+        "beforeDeltaDb": -0.021287082059529366,
+        "afterDeltaDb": -1.2922740651835576
+      },
+      {
+        "input": "1",
+        "referenceRms": 0.05725924597980897,
+        "beforeRms": 0.22615379235859012,
+        "afterRms": 0.07615089494520474,
+        "beforeDeltaDb": 11.931165001939652,
+        "afterDeltaDb": 2.476587738832086
+      }
+    ]
+  },
+  "sourceSha256": {
+    "src\\dsp\\FxEngine.cpp": "91D60CD3491942C989F656BCDA6274C2EA59947582538DBC2C6DF83F3E7BCD35",
+    "src\\dsp\\Oscillators.cpp": "05167C800C4703DAB8E24F9A3C2AEC589D6E5233A931D8EC6863A5C7B88C5151",
+    "src\\SerumImporter.cpp": "116C64971B78A284CAB3BD8F9125A5FA0DBB452D0857D494FE6B5CB0BADD6FF3",
+    "tools\\dsp_quality.cpp": "5348866065F746E1EFDD491875A553AD3B767432B66CA6CBAC2D5675E9E9A4F1"
+  },
+  "windowsValidation": {
+    "vst3Sha256": "F820A3B459344A46A67DB9DBB4CC2A574CEACEC0DF4498A63D75899517E75830",
+    "nativeSuitesPassed": 8,
+    "dspChecksPassed": 119,
+    "pythonTestsPassed": 7,
+    "privateBankAudibleFiniteAssetsResolved": 15,
+    "privateBankConditions": {
+      "note": 36,
+      "velocity": 127,
+      "bpm": 120,
+      "holdSeconds": 2,
+      "renderSeconds": 6
+    },
+    "host": "REAPER 7.82/x64",
+    "hostExitCode": 0,
+    "nativeRecallCases": 7,
+    "neutralMixRelativeError": {
+      "neutral0": 0.0,
+      "neutral50": 0.0,
+      "recalled": 0.0
+    },
+    "makeupDb": 6.020599917314947,
+    "activeCompressionDb": -15.260081235799088,
+    "nativeStateMigrationVerified": true,
+    "clapBuilt": true,
+    "clapHostTested": false,
+    "linuxRetested": false
+  }
+}

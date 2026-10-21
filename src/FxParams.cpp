@@ -74,22 +74,24 @@ constexpr std::array<I, 9> phaser {{
     {"wet", "kParamWet", 50, 0, 100}, {"width", "kParamWidth", 90, 0, 360},
     {"beatSync", "kParamBeatSync", 0, 0, 1}}};
 constexpr std::array<I, 12> reverb {{
-    {"delay", "kParamDelay", 30, 0, 250}, {"feedback", "kParamFeedback", 50, 0, 100},
-    {"freq", "kParamFreq", 70, 0, 100}, {"freqB", "kParamFreqB", 50, 0, 100},
-    {"freqC", "kParamFreqC", 50, 0, 100}, {"mode", "kParamMode", 50, 0, 100},
-    {"preDelay", "kParamPreDelay", 0.02, 0, 2.5}, {"size", "kParamSize", 50, 0, 100},
-    {"vintageScale", "kParamVintageScale", 50, 0, 100}, {"vintageScaleB", "kParamVintageScaleB", 50, 0, 100},
-    {"wet", "kParamWet", 25, 0, 100}, {"width", "kParamWidth", 80, 0, 100}}};
+    {"delay", "kParamDelay", 30.625, 0, 250}, {"feedback", "kParamFeedback", 25, 0, 100},
+    {"freq", "kParamFreq", 0, 0, 100}, {"freqB", "kParamFreqB", 35, 0, 100},
+    {"freqC", "kParamFreqC", 70, 0, 100}, {"mode", "kParamMode", 70, 0, 100},
+    {"preDelay", "kParamPreDelay", 0, 0, 2.5}, {"size", "kParamSize", 35, 0, 100},
+    {"vintageScale", "kParamVintageScale", 70, 0, 100}, {"vintageScaleB", "kParamVintageScaleB", 70, 0, 100},
+    {"wet", "kParamWet", 20, 0, 100}, {"width", "kParamWidth", 20, 0, 100}}};
 constexpr std::array<I, 9> utils {{
     {"balance", "kParamBalance", 0, -100, 100}, {"hpf", "kParamHPF", 20, 1, 400},
     {"lfMono", "kParamLFMono", 0, 0, 1}, {"lfXover", "kParamLFXover", 150, 20, 400},
     {"lpf", "kParamLPF", 20000, 50, 20000}, {"polarityL", "kParamPolarityL", 0, 0, 1},
     {"polarityR", "kParamPolarityR", 0, 0, 1}, {"wet", "kParamWet", 100, 0, 100},
     {"width", "kParamWidth", 100, 0, 800}}};
-constexpr std::array<I, 5> split {{
+constexpr std::array<I, 8> split {{
     {"freq", "kParamFreq", 500, 30, 3600}, {"freq2", "kParamFreq2", 3000, 300, 9000},
     {"count1", "kParamModuleCount1", 0, 0, 5}, {"count2", "kParamModuleCount2", 0, 0, 5},
-    {"count3", "kParamModuleCount3", 0, 0, 5}}};
+    {"count3", "kParamModuleCount3", 0, 0, 5},
+    {"bypass1", "kParamBand1Bypass", 0, 0, 1}, {"bypass2", "kParamBand2Bypass", 0, 0, 1},
+    {"bypass3", "kParamBand3Bypass", 0, 0, 1}}};
 // ZYG extensions. depth/wet in percent; beats in quarter notes; times in ms.
 constexpr std::array<I, 9> pump {{
     {"depth", "", 80, 0, 100}, {"beats", "", 1, 0.0625, 16}, {"shape", "", 0, -100, 100},

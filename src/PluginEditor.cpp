@@ -24,17 +24,42 @@ constexpr int kTopH = 52, kDockH = 68, kGap = 4;
 constexpr double kPageShare = 0.54;
 constexpr int kMinPageH = 290, kMinModH = 208;
 
-juce::File prefsFile() {
+juce::File legacyPrefsFile() {
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("ZYG-ZXG").getChildFile("ui.txt");
 }
-struct Prefs { int scale = 1, w = ZygEditor::defaultWidth, h = ZygEditor::defaultHeight; bool gpu = true, retro = true; };
+juce::File prefsFile() {
+   #if JUCE_WINDOWS
+    // Packaged tools can see a redirected AppData tree that a normal DAW does
+    // not share. Use the same profile config directory as the content setting.
+    return juce::File::getSpecialLocation(juce::File::userHomeDirectory).getChildFile(".config/ZYG-ZXG/ui.txt");
+   #else
+    return legacyPrefsFile();
+   #endif
+}
+struct Prefs {
+    int scale = 1, w = ZygEditor::defaultWidth, h = ZygEditor::defaultHeight;
+   #if JUCE_WINDOWS
+    bool gpu = false; // GDI is the reliable initial renderer in Windows hosts.
+   #else
+    bool gpu = true;
+   #endif
+    bool retro = true;
+};
 Prefs loadPrefs() {
     Prefs p;
-    const auto f = prefsFile();
+    const auto primary = prefsFile();
+    const auto f = primary.existsAsFile() ? primary : legacyPrefsFile();
     if (f.existsAsFile()) {
         juce::StringArray t; t.addTokens(f.loadFileAsString().trim(), " ", "");
         if (t.size() >= 3) { p.scale = juce::jlimit(1, 3, t[0].getIntValue()); p.w = juce::jlimit(1000, 4096, t[1].getIntValue()); p.h = juce::jlimit(600, 2400, t[2].getIntValue()); }
-        if (t.size() >= 4) p.gpu = t[3].getIntValue() != 0;
+        // Migrate legacy size/retro choices, starting Windows on software. An
+        // explicit GPU choice saved in the shared settings remains available.
+       #if JUCE_WINDOWS
+        const bool restoreGpu = f == primary;
+       #else
+        constexpr bool restoreGpu = true;
+       #endif
+        if (t.size() >= 4 && restoreGpu) p.gpu = t[3].getIntValue() != 0;
         if (t.size() >= 5) p.retro = t[4].getIntValue() != 0;
     }
     return p;
@@ -298,6 +323,15 @@ void ZygEditor::dragOperationEnded(const juce::DragAndDropTarget::SourceDetails&
 }
 
 void ZygEditor::timerCallback() {
+   #if JUCE_WINDOWS
+    // Keep the software preference on GDI as well as disabling OpenGL.
+    // Some Windows host/driver combinations leave the Direct2D peer blank.
+    if (!gpu_)
+        if (auto* peer = getPeer(); peer != nullptr && peer->getCurrentRenderingEngine() != 0) {
+            peer->setCurrentRenderingEngine(0);
+            repaint();
+        }
+   #endif
     if (const auto msg = proc_.takeResampleMessage(); msg.isNotEmpty()) ctx_.toast(msg);
     ctx_.flush();
     ctx_.refreshPatch();

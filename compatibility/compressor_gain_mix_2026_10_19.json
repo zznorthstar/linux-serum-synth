@@ -1,0 +1,1462 @@
+{
+  "schema": "zygzxg-compressor-gain-mix-1",
+  "date": "2026-10-19",
+  "scope": "Original native compressor makeup and optional phase-matched dry; initial timing characterization without timing algorithm changes",
+  "oracle": {
+    "reference": "Licensed Serum2.1.5 / owned REAPER7.82",
+    "freshProcessors": true,
+    "sampleRate": 48000,
+    "midiNote": 60,
+    "velocity": 127,
+    "bpm": 120,
+    "noteStartSeconds": 1,
+    "noteHoldSeconds": 4,
+    "float32": true,
+    "levelMatching": false,
+    "cases": 50,
+    "staticCases": 29,
+    "dynamicCases": 21,
+    "staticMaxBeforeDifferenceDb": 1.4793634731848613,
+    "staticMaxAfterDifferenceDb": 0.03676501271183952
+  },
+  "staticMeasurements": [
+    {
+      "label": "dry-sine",
+      "amplitude": 0.001,
+      "multi": null,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": null,
+      "referenceRmsDb": -72.01367042035385,
+      "nativeRmsDb": -72.05043543306569,
+      "differenceDb": -0.03676501271183952
+    },
+    {
+      "label": "m0-makeup-1",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 1.0
+      },
+      "referenceRmsDb": -72.01804860996614,
+      "nativeRmsDb": -72.05043543306569,
+      "differenceDb": -0.032386823099542994
+    },
+    {
+      "label": "m0-makeup-2",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 2.0
+      },
+      "referenceRmsDb": -65.8539280592581,
+      "nativeRmsDb": -65.88626382709103,
+      "differenceDb": -0.032335767832933016
+    },
+    {
+      "label": "m0-makeup-4",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0
+      },
+      "referenceRmsDb": -59.76242120316539,
+      "nativeRmsDb": -59.794758298487025,
+      "differenceDb": -0.032337095321636866
+    },
+    {
+      "label": "m0-makeup-8",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 8.0
+      },
+      "referenceRmsDb": -53.70658469585666,
+      "nativeRmsDb": -53.73892146355895,
+      "differenceDb": -0.0323367677022901
+    },
+    {
+      "label": "m0-makeup-16",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 16.0
+      },
+      "referenceRmsDb": -47.66841995037552,
+      "nativeRmsDb": -47.700756550494425,
+      "differenceDb": -0.032336600118902936
+    },
+    {
+      "label": "m0-makeup-31",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 31.0
+      },
+      "referenceRmsDb": -41.91507494309839,
+      "nativeRmsDb": -41.94743586666757,
+      "differenceDb": -0.03236092356917908
+    },
+    {
+      "label": "m0-phase-0-wet-0",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 0.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -72.01804860996614,
+      "nativeRmsDb": -72.05043543306569,
+      "differenceDb": -0.032386823099542994
+    },
+    {
+      "label": "m0-phase-0-wet-25",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 25.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -67.03429787862765,
+      "nativeRmsDb": -67.06646828535045,
+      "differenceDb": -0.03217040672279836
+    },
+    {
+      "label": "m0-phase-0-wet-50",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 50.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -63.88737351958008,
+      "nativeRmsDb": -63.919631825662364,
+      "differenceDb": -0.03225830608228364
+    },
+    {
+      "label": "m0-phase-0-wet-100",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 100.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -59.76242120316539,
+      "nativeRmsDb": -59.794758298487025,
+      "differenceDb": -0.032337095321636866
+    },
+    {
+      "label": "m0-phase-1-wet-0",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 0.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -72.01804860996614,
+      "nativeRmsDb": -72.05043543306569,
+      "differenceDb": -0.032386823099542994
+    },
+    {
+      "label": "m0-phase-1-wet-25",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 25.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -67.03429787862765,
+      "nativeRmsDb": -67.06646828535045,
+      "differenceDb": -0.03217040672279836
+    },
+    {
+      "label": "m0-phase-1-wet-50",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 50.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -63.88737351958008,
+      "nativeRmsDb": -63.919631825662364,
+      "differenceDb": -0.03225830608228364
+    },
+    {
+      "label": "m0-phase-1-wet-100",
+      "amplitude": 0.001,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 100.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -59.76242120316539,
+      "nativeRmsDb": -59.794758298487025,
+      "differenceDb": -0.032337095321636866
+    },
+    {
+      "label": "m1-makeup-1",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 1.0
+      },
+      "referenceRmsDb": -72.03865523440618,
+      "nativeRmsDb": -72.05171833046961,
+      "differenceDb": -0.013063096063433477
+    },
+    {
+      "label": "m1-makeup-2",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 2.0
+      },
+      "referenceRmsDb": -65.87453468529371,
+      "nativeRmsDb": -65.88754672456203,
+      "differenceDb": -0.013012039268318176
+    },
+    {
+      "label": "m1-makeup-4",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0
+      },
+      "referenceRmsDb": -59.78302780171984,
+      "nativeRmsDb": -59.796041195054784,
+      "differenceDb": -0.013013393334944112
+    },
+    {
+      "label": "m1-makeup-8",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 8.0
+      },
+      "referenceRmsDb": -53.7271912855247,
+      "nativeRmsDb": -53.74020436003778,
+      "differenceDb": -0.013013074513082756
+    },
+    {
+      "label": "m1-makeup-16",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 16.0
+      },
+      "referenceRmsDb": -47.689026560288276,
+      "nativeRmsDb": -47.70203944491524,
+      "differenceDb": -0.013012884626967036
+    },
+    {
+      "label": "m1-makeup-31",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 31.0
+      },
+      "referenceRmsDb": -41.93568155490703,
+      "nativeRmsDb": -41.94871876407149,
+      "differenceDb": -0.01303720916445883
+    },
+    {
+      "label": "m1-phase-0-wet-0",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 0.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -72.01804860996614,
+      "nativeRmsDb": -72.05043543306569,
+      "differenceDb": -0.032386823099542994
+    },
+    {
+      "label": "m1-phase-0-wet-25",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 25.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -68.67032082966642,
+      "nativeRmsDb": -68.64401661054926,
+      "differenceDb": 0.026304219117164962
+    },
+    {
+      "label": "m1-phase-0-wet-50",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 50.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -64.88271719918082,
+      "nativeRmsDb": -64.87192605656037,
+      "differenceDb": 0.010791142620448113
+    },
+    {
+      "label": "m1-phase-0-wet-100",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 100.0,
+        "kParamCompensatedWetDry": 0.0
+      },
+      "referenceRmsDb": -59.78302780171984,
+      "nativeRmsDb": -59.796041195054784,
+      "differenceDb": -0.013013393334944112
+    },
+    {
+      "label": "m1-phase-1-wet-0",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 0.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -72.03865523440618,
+      "nativeRmsDb": -72.05171833046961,
+      "differenceDb": -0.013063096063433477
+    },
+    {
+      "label": "m1-phase-1-wet-25",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 25.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -67.05490450346262,
+      "nativeRmsDb": -67.06775118205202,
+      "differenceDb": -0.012846678589397698
+    },
+    {
+      "label": "m1-phase-1-wet-50",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 50.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -63.90798011804867,
+      "nativeRmsDb": -63.92091472201607,
+      "differenceDb": -0.01293460396740187
+    },
+    {
+      "label": "m1-phase-1-wet-100",
+      "amplitude": 0.001,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 1,
+      "band": {
+        "kParamMakeup": 4.0,
+        "kParamWet": 100.0,
+        "kParamCompensatedWetDry": 1.0
+      },
+      "referenceRmsDb": -59.78302780171984,
+      "nativeRmsDb": -59.796041195054784,
+      "differenceDb": -0.013013393334944112
+    }
+  ],
+  "dynamicRmsMeasurements": [
+    {
+      "label": "dry-step",
+      "amplitude": 1.0,
+      "multi": null,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 100.0,
+      "referenceRmsDb": -51.801141697354815,
+      "nativeRmsDb": -52.05149973258075,
+      "differenceDb": -0.25035803522593625
+    },
+    {
+      "label": "m0-attack-0.1",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 100.0,
+      "referenceRmsDb": -52.09943108656465,
+      "nativeRmsDb": -52.1685086462658,
+      "differenceDb": -0.06907755970114948
+    },
+    {
+      "label": "m0-attack-1",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 1.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 1.0,
+      "release": 100.0,
+      "referenceRmsDb": -52.09380651813212,
+      "nativeRmsDb": -52.16335019322326,
+      "differenceDb": -0.06954367509113979
+    },
+    {
+      "label": "m0-attack-10",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 10.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 10.0,
+      "release": 100.0,
+      "referenceRmsDb": -52.070905927849054,
+      "nativeRmsDb": -52.142774808543884,
+      "differenceDb": -0.07186888069482933
+    },
+    {
+      "label": "m0-attack-100",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 100.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 100.0,
+      "release": 100.0,
+      "referenceRmsDb": -51.99284235922927,
+      "nativeRmsDb": -52.091308565493776,
+      "differenceDb": -0.09846620626450431
+    },
+    {
+      "label": "m0-attack-1000",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 1000.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 1000.0,
+      "release": 100.0,
+      "referenceRmsDb": -51.858741084313074,
+      "nativeRmsDb": -52.052015737983695,
+      "differenceDb": -0.19327465367062047
+    },
+    {
+      "label": "m0-release-0.1",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 0.1
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 0.1,
+      "referenceRmsDb": -51.86983830832663,
+      "nativeRmsDb": -52.051500040083084,
+      "differenceDb": -0.1816617317564564
+    },
+    {
+      "label": "m0-release-1",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 1.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 1.0,
+      "referenceRmsDb": -51.919638859659,
+      "nativeRmsDb": -52.05235537625511,
+      "differenceDb": -0.13271651659610484
+    },
+    {
+      "label": "m0-release-10",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 10.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 10.0,
+      "referenceRmsDb": -51.943035864980686,
+      "nativeRmsDb": -52.06252441846352,
+      "differenceDb": -0.1194885534828316
+    },
+    {
+      "label": "m0-release-100",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 100.0,
+      "referenceRmsDb": -52.09943108656465,
+      "nativeRmsDb": -52.1685086462658,
+      "differenceDb": -0.06907755970114948
+    },
+    {
+      "label": "m0-release-1000",
+      "amplitude": 1.0,
+      "multi": false,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 1000.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 1000.0,
+      "referenceRmsDb": -53.62737377730396,
+      "nativeRmsDb": -53.41349294914663,
+      "differenceDb": 0.213880828157329
+    },
+    {
+      "label": "m1-attack-0.1",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 100.0,
+      "referenceRmsDb": -51.898065103696155,
+      "nativeRmsDb": -52.009385945623066,
+      "differenceDb": -0.11132084192691138
+    },
+    {
+      "label": "m1-attack-1",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 1.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 1.0,
+      "release": 100.0,
+      "referenceRmsDb": -51.89804839925571,
+      "nativeRmsDb": -51.99937361045958,
+      "differenceDb": -0.10132521120387139
+    },
+    {
+      "label": "m1-attack-10",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 10.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 10.0,
+      "release": 100.0,
+      "referenceRmsDb": -51.89805438599252,
+      "nativeRmsDb": -51.95692172182508,
+      "differenceDb": -0.05886733583255932
+    },
+    {
+      "label": "m1-attack-100",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 100.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 100.0,
+      "release": 100.0,
+      "referenceRmsDb": -51.89805496003594,
+      "nativeRmsDb": -51.80461591710778,
+      "differenceDb": 0.09343904292816063
+    },
+    {
+      "label": "m1-attack-1000",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 1000.0,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 1000.0,
+      "release": 100.0,
+      "referenceRmsDb": -51.89805502812281,
+      "nativeRmsDb": -51.26048527002559,
+      "differenceDb": 0.6375697580972215
+    },
+    {
+      "label": "m1-release-0.1",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 0.1
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 0.1,
+      "referenceRmsDb": -51.61842464915175,
+      "nativeRmsDb": -51.21570339255147,
+      "differenceDb": 0.40272125660028024
+    },
+    {
+      "label": "m1-release-1",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 1.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 1.0,
+      "referenceRmsDb": -51.63237121157372,
+      "nativeRmsDb": -51.5357207625138,
+      "differenceDb": 0.09665044905992204
+    },
+    {
+      "label": "m1-release-10",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 10.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 10.0,
+      "referenceRmsDb": -51.633822723539645,
+      "nativeRmsDb": -51.73083455214215,
+      "differenceDb": -0.09701182860250412
+    },
+    {
+      "label": "m1-release-100",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 100.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 100.0,
+      "referenceRmsDb": -51.898065103696155,
+      "nativeRmsDb": -52.009385945623066,
+      "differenceDb": -0.11132084192691138
+    },
+    {
+      "label": "m1-release-1000",
+      "amplitude": 1.0,
+      "multi": true,
+      "below": 0,
+      "threshold": 0.5,
+      "ratio": 4,
+      "band": {
+        "kParamAttack": 0.1,
+        "kParamRelease": 1000.0
+      },
+      "kind": "step",
+      "attack": 0.1,
+      "release": 1000.0,
+      "referenceRmsDb": -55.94634231012978,
+      "nativeRmsDb": -56.35814068792551,
+      "differenceDb": -0.4117983777957335
+    }
+  ],
+  "timingMeasurements": [
+    {
+      "label": "m0-attack-0.1",
+      "multi": false,
+      "attack": 0.1,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -4.275321635699196,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 69.50000000000011
+      },
+      "native": {
+        "plateauGainDb": -4.2766157747917175,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 66.5
+      }
+    },
+    {
+      "label": "m0-attack-1",
+      "multi": false,
+      "attack": 1.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -4.170642204165682,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 69.50000000000011
+      },
+      "native": {
+        "plateauGainDb": -4.155296684516491,
+        "attackHalfMs": 2.4999999999999467,
+        "sustainedReleaseHalfMs": 64.50000000000023
+      }
+    },
+    {
+      "label": "m0-attack-10",
+      "multi": false,
+      "attack": 10.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -3.7592386588920643,
+        "attackHalfMs": 9.500000000000064,
+        "sustainedReleaseHalfMs": 69.50000000000011
+      },
+      "native": {
+        "plateauGainDb": -3.6463828654706627,
+        "attackHalfMs": 19.49999999999985,
+        "sustainedReleaseHalfMs": 57.50000000000011
+      }
+    },
+    {
+      "label": "m0-attack-100",
+      "multi": false,
+      "attack": 100.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -2.512495713408123,
+        "attackHalfMs": 126.50000000000006,
+        "sustainedReleaseHalfMs": 69.50000000000011
+      },
+      "native": {
+        "plateauGainDb": -2.061012067054815,
+        "attackHalfMs": null,
+        "sustainedReleaseHalfMs": 39.49999999999987
+      }
+    },
+    {
+      "label": "m0-attack-1000",
+      "multi": false,
+      "attack": 1000.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -0.7852433414910268,
+        "attackHalfMs": null,
+        "sustainedReleaseHalfMs": 69.50000000000011
+      },
+      "native": {
+        "plateauGainDb": -0.0913572570830713,
+        "attackHalfMs": null,
+        "sustainedReleaseHalfMs": 10.499999999999954
+      }
+    },
+    {
+      "label": "m0-release-0.1",
+      "multi": false,
+      "attack": 0.1,
+      "release": 0.1,
+      "reference": {
+        "plateauGainDb": -2.903772461048848,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 0.5
+      },
+      "native": {
+        "plateauGainDb": -2.4625696163743562,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 0.5
+      }
+    },
+    {
+      "label": "m0-release-1",
+      "multi": false,
+      "attack": 0.1,
+      "release": 1.0,
+      "reference": {
+        "plateauGainDb": -3.755979805794704,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 0.5
+      },
+      "native": {
+        "plateauGainDb": -3.650382798952791,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 0.5
+      }
+    },
+    {
+      "label": "m0-release-10",
+      "multi": false,
+      "attack": 0.1,
+      "release": 10.0,
+      "reference": {
+        "plateauGainDb": -4.167010144318127,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 0.5
+      },
+      "native": {
+        "plateauGainDb": -4.154035631794725,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 6.49999999999995
+      }
+    },
+    {
+      "label": "m0-release-100",
+      "multi": false,
+      "attack": 0.1,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -4.275321635699196,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 69.50000000000011
+      },
+      "native": {
+        "plateauGainDb": -4.2766157747917175,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 66.5
+      }
+    },
+    {
+      "label": "m0-release-1000",
+      "multi": false,
+      "attack": 0.1,
+      "release": 1000.0,
+      "reference": {
+        "plateauGainDb": -4.294657325177695,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 692.4999999999999
+      },
+      "native": {
+        "plateauGainDb": -4.3110478155608245,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 662.5000000000001
+      }
+    },
+    {
+      "label": "m1-attack-0.1",
+      "multi": true,
+      "attack": 0.1,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -12.549394224191431,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 104.50000000000026
+      },
+      "native": {
+        "plateauGainDb": -12.593449283825644,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 106.50000000000004
+      }
+    },
+    {
+      "label": "m1-attack-1",
+      "multi": true,
+      "attack": 1.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -12.549227184730896,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 104.50000000000026
+      },
+      "native": {
+        "plateauGainDb": -12.449415850207256,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 105.50000000000014
+      }
+    },
+    {
+      "label": "m1-attack-10",
+      "multi": true,
+      "attack": 10.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -12.549295278723362,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 104.50000000000026
+      },
+      "native": {
+        "plateauGainDb": -11.856563437624954,
+        "attackHalfMs": 8.500000000000174,
+        "sustainedReleaseHalfMs": 100.50000000000026
+      }
+    },
+    {
+      "label": "m1-attack-100",
+      "multi": true,
+      "attack": 100.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -12.549301929151266,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 104.50000000000026
+      },
+      "native": {
+        "plateauGainDb": -9.960121622013078,
+        "attackHalfMs": 78.50000000000001,
+        "sustainedReleaseHalfMs": 83.49999999999991
+      }
+    },
+    {
+      "label": "m1-attack-1000",
+      "multi": true,
+      "attack": 1000.0,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -12.549302575321507,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 104.50000000000026
+      },
+      "native": {
+        "plateauGainDb": -5.159206415470504,
+        "attackHalfMs": null,
+        "sustainedReleaseHalfMs": 47.49999999999987
+      }
+    },
+    {
+      "label": "m1-release-0.1",
+      "multi": true,
+      "attack": 0.1,
+      "release": 0.1,
+      "reference": {
+        "plateauGainDb": -12.44721131282789,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 0.5
+      },
+      "native": {
+        "plateauGainDb": -10.3539310666119,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 0.5
+      }
+    },
+    {
+      "label": "m1-release-1",
+      "multi": true,
+      "attack": 0.1,
+      "release": 1.0,
+      "reference": {
+        "plateauGainDb": -12.510983893103054,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 0.5
+      },
+      "native": {
+        "plateauGainDb": -11.871904809810733,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 0.5
+      }
+    },
+    {
+      "label": "m1-release-10",
+      "multi": true,
+      "attack": 0.1,
+      "release": 10.0,
+      "reference": {
+        "plateauGainDb": -12.518417979501791,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 0.5
+      },
+      "native": {
+        "plateauGainDb": -12.445518537206755,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 9.500000000000064
+      }
+    },
+    {
+      "label": "m1-release-100",
+      "multi": true,
+      "attack": 0.1,
+      "release": 100.0,
+      "reference": {
+        "plateauGainDb": -12.549394224191431,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 104.50000000000026
+      },
+      "native": {
+        "plateauGainDb": -12.593449283825644,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 106.50000000000004
+      }
+    },
+    {
+      "label": "m1-release-1000",
+      "multi": true,
+      "attack": 0.1,
+      "release": 1000.0,
+      "reference": {
+        "plateauGainDb": -12.561771840886404,
+        "attackHalfMs": 1.5000000000000568,
+        "sustainedReleaseHalfMs": 1041.5
+      },
+      "native": {
+        "plateauGainDb": -12.630092051942157,
+        "attackHalfMs": 0.500000000000167,
+        "sustainedReleaseHalfMs": 1063.5000000000002
+      }
+    }
+  ],
+  "dynamicNativeBeforeAfterSampleIdenticalCases": 21,
+  "corpus": {
+    "cases": 24,
+    "finiteAudible": 24,
+    "missingAssets": 0,
+    "improvedOverallRmsErrorCases": 8,
+    "sampleIdenticalCases": 16,
+    "retainedBankSmokeCases": 15,
+    "measurements": [
+      {
+        "case": "p00-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -11.30770243959379,
+        "afterRmsDifferenceDb": -11.2316970649877,
+        "beforeEnvelopeCorrelation": 0.9531535439808503,
+        "afterEnvelopeCorrelation": 0.9527734305880827,
+        "maxNativeAudioChange": 0.010406732559204102
+      },
+      {
+        "case": "p00-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.291000660022291,
+        "afterRmsDifferenceDb": -10.204082873424802,
+        "beforeEnvelopeCorrelation": 0.9486925934816159,
+        "afterEnvelopeCorrelation": 0.9479296031025839,
+        "maxNativeAudioChange": 0.013753801584243774
+      },
+      {
+        "case": "p01-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -6.959651199945153,
+        "afterRmsDifferenceDb": -6.821788448054395,
+        "beforeEnvelopeCorrelation": 0.8821121209472028,
+        "afterEnvelopeCorrelation": 0.8831154796472165,
+        "maxNativeAudioChange": 0.007009327411651611
+      },
+      {
+        "case": "p01-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -0.9060355249499388,
+        "afterRmsDifferenceDb": -0.8166808895372348,
+        "beforeEnvelopeCorrelation": 0.9828125142200466,
+        "afterEnvelopeCorrelation": 0.9825457067704005,
+        "maxNativeAudioChange": 0.0066550374031066895
+      },
+      {
+        "case": "p02-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -13.705207368392252,
+        "afterRmsDifferenceDb": -13.705207368392252,
+        "beforeEnvelopeCorrelation": 0.7639916837783446,
+        "afterEnvelopeCorrelation": 0.7639916837783446,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p02-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -14.505188302078654,
+        "afterRmsDifferenceDb": -14.505188302078654,
+        "beforeEnvelopeCorrelation": 0.7662283524636155,
+        "afterEnvelopeCorrelation": 0.7662283524636155,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p03-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -10.493022451675085,
+        "afterRmsDifferenceDb": -10.493022451675085,
+        "beforeEnvelopeCorrelation": 0.9528977239967136,
+        "afterEnvelopeCorrelation": 0.9528977239967136,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p03-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -9.78053963496226,
+        "afterRmsDifferenceDb": -9.78053963496226,
+        "beforeEnvelopeCorrelation": 0.9442558699296661,
+        "afterEnvelopeCorrelation": 0.9442558699296661,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p04-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -4.033243260223692,
+        "afterRmsDifferenceDb": -4.033243260223692,
+        "beforeEnvelopeCorrelation": 0.7140739560916893,
+        "afterEnvelopeCorrelation": 0.7140739560916893,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p04-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -3.1328629012905154,
+        "afterRmsDifferenceDb": -3.1328629012905154,
+        "beforeEnvelopeCorrelation": 0.7126323536253789,
+        "afterEnvelopeCorrelation": 0.7126323536253789,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p05-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -7.115160522990429,
+        "afterRmsDifferenceDb": -7.115160522990429,
+        "beforeEnvelopeCorrelation": 0.9353628072720873,
+        "afterEnvelopeCorrelation": 0.9353628072720873,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p05-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -8.65632487930241,
+        "afterRmsDifferenceDb": -8.65632487930241,
+        "beforeEnvelopeCorrelation": 0.9729976155266502,
+        "afterEnvelopeCorrelation": 0.9729976155266502,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p06-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": 1.780117717567439,
+        "afterRmsDifferenceDb": 1.780117717567439,
+        "beforeEnvelopeCorrelation": 0.7961584340155247,
+        "afterEnvelopeCorrelation": 0.7961584340155247,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p06-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -3.513657212854131,
+        "afterRmsDifferenceDb": -3.513657212854131,
+        "beforeEnvelopeCorrelation": 0.857732125812193,
+        "afterEnvelopeCorrelation": 0.857732125812193,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p07-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -19.945326880354287,
+        "afterRmsDifferenceDb": -19.945326880354287,
+        "beforeEnvelopeCorrelation": 0.8595328006521488,
+        "afterEnvelopeCorrelation": 0.8595328006521488,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p07-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -14.578071299190654,
+        "afterRmsDifferenceDb": -14.578071299190654,
+        "beforeEnvelopeCorrelation": 0.9067703613097944,
+        "afterEnvelopeCorrelation": 0.9067703613097944,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p08-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -10.828790702934405,
+        "afterRmsDifferenceDb": -10.828790702934405,
+        "beforeEnvelopeCorrelation": 0.8250326120571209,
+        "afterEnvelopeCorrelation": 0.8250326120571209,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p08-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -13.298481184043345,
+        "afterRmsDifferenceDb": -13.298481184043345,
+        "beforeEnvelopeCorrelation": 0.9854033695295001,
+        "afterEnvelopeCorrelation": 0.9854033695295001,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p09-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": 0.22439896123453806,
+        "afterRmsDifferenceDb": 0.22439896123453806,
+        "beforeEnvelopeCorrelation": 0.7246742469578478,
+        "afterEnvelopeCorrelation": 0.7246742469578478,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p09-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -1.8770153951350945,
+        "afterRmsDifferenceDb": -1.8770153951350945,
+        "beforeEnvelopeCorrelation": 0.6338697729864124,
+        "afterEnvelopeCorrelation": 0.6338697729864124,
+        "maxNativeAudioChange": 0.0
+      },
+      {
+        "case": "p10-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -1.201100091606076,
+        "afterRmsDifferenceDb": -0.9413571584321048,
+        "beforeEnvelopeCorrelation": 0.9058823870635456,
+        "afterEnvelopeCorrelation": 0.9058845909586658,
+        "maxNativeAudioChange": 0.03659689426422119
+      },
+      {
+        "case": "p10-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -0.9905428156541412,
+        "afterRmsDifferenceDb": -0.7312103932565286,
+        "beforeEnvelopeCorrelation": 0.9122010578939547,
+        "afterEnvelopeCorrelation": 0.9121583535940394,
+        "maxNativeAudioChange": 0.027122437953948975
+      },
+      {
+        "case": "p11-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -7.660391654644265,
+        "afterRmsDifferenceDb": -7.659615159007721,
+        "beforeEnvelopeCorrelation": 0.8771866726452643,
+        "afterEnvelopeCorrelation": 0.8772100603549702,
+        "maxNativeAudioChange": 0.0022716298699378967
+      },
+      {
+        "case": "p11-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.961471698996142,
+        "afterRmsDifferenceDb": -10.958395585744206,
+        "beforeEnvelopeCorrelation": 0.9899667279572353,
+        "afterEnvelopeCorrelation": 0.9899233759734682,
+        "maxNativeAudioChange": 0.002390548586845398
+      }
+    ]
+  },
+  "model": {
+    "makeupFlag": "compressorAffineMakeup",
+    "missingMakeupFlag": false,
+    "phaseFlag": "compressorPhaseMatchedDry",
+    "missingPhaseFlag": true,
+    "makeupInputRange": [
+      1,
+      31
+    ],
+    "makeupGainRange": [
+      1,
+      32
+    ],
+    "nativeCreativeDefaultsChanged": false,
+    "timingAlgorithmChanged": false,
+    "phaseMatrixDestination": false
+  },
+  "tests": {
+    "cppSuites": 8,
+    "cppSuitesPassed": 8,
+    "dspChecks": 141,
+    "pythonChecks": 7,
+    "preparedMakeupSlewAllocationFree": true
+  },
+  "installedVst3Sha256": "41ACFA411E24CD57D778B98E0788BCEFEEF6960D861E4D94868B199F535C58AA",
+  "host": {
+    "ownedPid": 3240,
+    "exit": 0,
+    "cases": 12,
+    "allFiniteAudible": true,
+    "levelsDb": {
+      "corrected": -63.92091472201607,
+      "repeat": -63.92091472201607,
+      "recalled": -63.92091472201607,
+      "unmatched": -64.87192605656037,
+      "wet": -59.796041195054784,
+      "wetMatched": -59.796041195054784,
+      "unmatchedDry": -72.05043543306569,
+      "dry": -72.05043543306569,
+      "oldModel": -64.0929181558373,
+      "missingFields": -64.0929181558373,
+      "fullMakeup": -41.94871876407149,
+      "matchedDry": -72.05171833046961
+    },
+    "exactRelations": [
+      {
+        "first": "corrected",
+        "second": "repeat",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "corrected",
+        "second": "recalled",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "unmatchedDry",
+        "second": "dry",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "oldModel",
+        "second": "missingFields",
+        "maxDifference": 0.0
+      }
+    ],
+    "fullWetSwitchMaxDifference": 0.0,
+    "sidecarFreeRecall": true
+  },
+  "clapBuilt": true,
+  "clapHostTestedThisPass": false,
+  "linuxRerun": false,
+  "limits": "Steady controls measured at261.626Hz/48kHz only. Timing uses1ms RMS bins and instrument-specific dry input, not latency-aligned detector identification; initial transients affect ratios. Sustained recovery replaces misleading first-crossing metrics. Nearly invariant loaded-state multiband attack sweep needs UI/automation and other-signal confirmation. Detector/transient/crossover/stereo/source-resampling/limiter behavior and full-preset sound remain partial. Private presets/assets/audio stay outside Git; factory replacement remains deferred."
+}

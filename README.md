@@ -44,8 +44,8 @@ Linux music makers don't have a modern, Serum-class wavetable synth that runs na
 ## Known limitations
 
 - **Imported Serum 2 presets sound different from Serum 2.**
-  - Parameter scaling, modulation amounts, warp/filter/FX curves and envelope/LFO timing are ZYG's own guesses. None of them has been calibrated against real Serum yet ([details](docs/SERUM_ORACLE_HANDOFF.md)).
-  - Some Serum features are stored but not rendered, e.g. tempo-synced envelopes and Serum 1 compatibility mode.
+  - Controlled comparisons against Serum 2.1.5 now calibrate sparse defaults, envelope timing/curves, LFO sync, wavetable frame selection, unison pitch, filter frequency controls and one overdrive gain range. These isolated results do not establish full-preset similarity; most warp/filter/FX character and modulation curves remain provisional ([measurements](docs/SERUM_ORACLE_MEASUREMENTS.md)).
+  - Some Serum features are stored but not rendered, including Serum 1 compatibility mode and scalar legato interpolation during portamento. Tempo-synced envelopes now render in beats at the host tempo.
   - The legacy `.fxp` format is not supported.
 - **Beta stability:**
   - Only REAPER on X11 has been exercised by hand. CLAP editor use, other DAWs and Wayland are largely untested.
@@ -69,6 +69,10 @@ All screenshots use the ZYG-native showcase patch.
 More detail is in [docs/INSTALL_LINUX.md](docs/INSTALL_LINUX.md).
 
 ## Build from source
+
+Continuing the Windows calibration work on Linux? Start with the
+[Linux checkpoint handoff](docs/LINUX_HANDOFF.md) for fresh-build steps, private
+content transfer and the remaining validation work.
 
 You need x86_64 Linux, CMake 3.24+, Ninja, a C++20 compiler, `libzstd`, and ALSA/X11/FreeType/OpenGL development packages. JUCE 8.0.9, nlohmann/json and clap-juce-extensions are fetched at pinned versions.
 

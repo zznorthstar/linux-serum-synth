@@ -1,6 +1,126 @@
 # Serum 2 compatibility matrix for ZYG-ZXG
 
+**2026-10-20 EQ modes/resonance:** new imports use shelf0/bell1/cut2,
+physical sparse defaults and measured native Q travel. A smoothed native TPT
+path passes rapid-automation stability checks; older native saves retain their
+previous processing. Ninety static EQ comparisons improve maximum gain error
+54.694 to0.001385dB. Musician levels improve13/worsen9/unchanged2; one case
+becomes11.318dB quieter. Source-only11–14dB gaps and other FX remain partial;
+the existing GUI mode choices are unchanged. See
+[implementation and measured limits](EQ_MODES_AND_RESONANCE.md).
+
+**2026-10-20 multiband attack follow-up:** normal editor/host automation and
+three-frequency controls confirm a fast reference band response in the tested
+conditions. New imports select a fixed0.1ms native band detector; older native
+saves retain global attack, which also remains active in single-band mode.
+Nine slow-attack cases improve and nine fast cases are unchanged; median gain
+envelope RMSE4.939 to2.151dB. Musician levels remain mixed:3 closer,13 worse,
+8 unchanged; two cases are about11dB quieter. Full-chain gain and other dynamics
+remain partial. See [evidence, migration and limits](COMPRESSOR_BAND_ATTACK.md).
+
+**2026-10-19 compressor makeup/mix follow-up:** new imports use measured
+multiband makeup and the compensated-wet/dry switch. Missing native flags retain
+prior numeric behavior. All29 steady controls differ <=.037dB;21 native step
+controls remain sample-identical across this update. Attack/release responses
+are characterized but remain uncalibrated. Eight musician levels improve
+slightly; other16 are unchanged. See [behavior and limits](COMPRESSOR_GAIN_MIX.md).
+
+**2026-10-19 compressor controls:** new imports select a versioned native
+mapping for global multiband threshold/ratio/BELOW, local bipolar below behavior,
+physical deadbands and per-branch bypass. Single-band BELOW is inactive. All177
+original steady-sine cases differ <=.538dB; isolated middle-band cases <=.051dB.
+Native creative defaults and older saved numeric models remain unchanged.
+All24 musician cases remain finite/audible with zero missing assets, but overall
+level improves in10, stays unchanged in6 and slightly worsens in8. Full sound,
+transients and automation depths remain partial. See
+[design, migration and measured limits](COMPRESSOR_CONTROLS.md).
+
+**2026-10-19 embedded sample follow-up:** sample/granular/spectral imports now
+decode bounded inline mono/stereo PCM and retain it in independent native state.
+The musician preset's missing embedded spectral source is restored. All24
+musician renders now resolve assets; the other22 remain sample-identical to the
+previous pass. Nine original reference controls verify payload layout/rate and
+eight fresh-plugin host cases verify native recall without Serum sidecars.
+Spectral character, compressor/legacy behavior and other embedded formats remain
+partial. See [implementation, measurements and limits](EMBEDDED_AUDIO.md).
+
+**2026-10-19 output filtering and musician-preset corpus:** new native patches
+and imports select an original tighter warp output decimator with integer
+32/48-sample wavetable/SUB alignment. Older native saves retain the previous
+model, including missing `globals`. Worst 4x coherent PM unwanted energy improves
+from -66.66 to -93.05 dB; extreme 2x internal folding remains. See
+[design and measured limits](OUTPUT_DECIMATOR_QUALITY.md). The newly supplied
+12 distinct musician presets add concrete reference tests, including an
+unsupported embedded spectral-audio payload and provisional compressor behavior.
+Audibility does not establish complete preset compatibility. No factory asset
+pack was created; private presets and reference audio stay outside this repo.
+
+**2026-10-19 audio-rate source reconstruction:** new native oscillators and
+Serum imports select original bandlimited external FM/PM/RM/AM input phases
+for wavetable/SUB warps. Older native state missing the model retains held
+sources. Reconstruction adds 24 input samples to the modulation path; reference
+phase/depth/feedback behavior remains uncalibrated. A 144-case original PM sweep
+measures lower folded energy while intended sidebands remain within .0012 dB;
+extreme 2x folding and 4x output-decimator leakage remain. Self-PD, matrix audio
+routes and spectral source reconstruction are outside this change. See
+[native measurements and limits](AUDIO_RATE_MODULATION.md).
+
+**2026-10-19 native DSP quality:** new/reimported multiband compressors use
+original phase-coherent band summation and parallel dry audio, explicit makeup
+and continuous upward gain without hidden loudness matching. Neutral synthetic
+responses are flat across the tested mixes/rates; old native saves retain the
+legacy model. Wet=0 retains crossover allpass phase; disable the module for
+transparent bypass. Reference multiband control curves and dynamics remain
+uncalibrated. Filter warps now receive the correct 4× processing rate. A new
+audio-rate PM baseline exposes limited 4× benefit and does not certify broader
+aliasing performance. See [native measurements](NATIVE_DSP_QUALITY.md).
+
+**2026-10-19 delay timing:** controlled primed reference tests establish twelve
+beat divisions, eleven switching neighborhoods, fourth-power time coordinates,
+free-time encoding and linked-state loading. New imports select corrected native
+timing while older native saves retain seconds behavior. Delay time/sync
+modulation transitions, startup settling and effect character remain partial;
+reverb pre-delay sync is still unsupported. Prepared delay targets cap at
+32 seconds. See [measurements](SERUM_ORACLE_MEASUREMENTS.md#delay-beat-grid-and-linked-state-loading-2026-10-19).
+
+**2026-10-18 splitter routing:** 37 controlled reference renders confirm whole
+and per-band bypass, nested boundaries, post-splitter effects and both M/S
+branches. Native traversal now skips whole bypassed subtrees, retains bypassed
+band audio and clips each child span to its parent. Solo, bypass transitions and
+crossover sound remain partial. Imports diagnose native graph limits and
+unsupported structural modulation/output gain. See
+[measurements](SERUM_ORACLE_MEASUREMENTS.md#splitter-bypass-and-branch-boundaries-2026-10-18).
+
+**2026-10-18 Windows editor:** shared profile UI preferences and software/GDI
+startup repair the reproduced black editor. A disposable REAPER instance
+visibly rendered the installed VST3, reopened it and changed pages. A short
+repeat exited normally after explicit audio shutdown; broad host shutdown/GPU
+stability remains unverified. All 8 C++ suites pass. This is a host/editor fix,
+not additional preset fidelity. Private native processing analysis corroborates
+delay offset/Link composition; sync scales and other interaction behavior remain
+partial. See [testing](TESTING.md) and [research workflow](CLEAN_ROOM_WORKFLOW.md).
+
+**2026-10-18 reported cases:** the two silent examples reproduce silence with
+missing content and produce audio with the owned local assets. Windows saved
+content selection now avoids packaged-process AppData redirection. The two
+persistent high-pitched examples isolate to native ladder FX feedback; original
+current-sample feedback and an import-only sparse resonance default correction
+remove the reproduced tails. All 8 C++ suites (96 DSP checks) and 7 Python tests
+pass; two fresh REAPER VST3 hosts verify the installed update. These checks do
+not establish full-preset Serum fidelity. Private static resource analysis has
+also started under the user's expanded research scope; declared control bindings
+are not equivalent to executed DSP behavior.
+
+**2026-10-18 time effects:** measured full-wet endpoints, first-repeat filtering,
+normal/ping-pong translation and Hall decay versus pre-delay are corrected in
+new/imported modules. Reverb low/high-cut directions and periodic phase wraps
+are repaired; cut curves, early reflections, intermediate mix and sync remain
+partial. Existing native time-effect state keeps its legacy model. See
+[current measurements](SERUM_ORACLE_MEASUREMENTS.md).
+
 Status: partial instrument slice, updated 2026-09-22. This is a specification and gap ledger, **not a full compatibility claim**. A native C++ decoder and importer now create an independent patch model, a basic wavetable/envelope/low-pass renderer exists, and VST3 plus CLAP instruments build. Most Serum features are preserved in an opaque sidecar or typed shell but **do not yet affect audio**. See [machine-readable status](../compatibility/serum2_support.json).
+
+> **2026-10-17 calibration update:** controlled measurements against Serum 2.1.5 now replace several provisional defaults and scales: envelope beat timing/curves, LFO triangle/sync, frame selection/crossfade, unison pitch/phase, oscillator/master gain controls, filter frequency and overdrive gain. Velocity/note source maps are rendered and displayed. Full-preset sound remains partial; six complete examples still show substantial differences. The historical table/default paragraph below is superseded for these fields by [reference measurements](SERUM_ORACLE_MEASUREMENTS.md) and the current importer/tests. Most FX, warp/filter character and matrix curves remain uncalibrated.
 
 Sources: [official Serum 2 User Guide](https://www.xferrecords.com/manual/serum-2/docs) (manual for Serum 2.0.18, April 2025), [official What's New](https://static.xferrecords.com/Serum%202%20What's%20New.pdf), and aggregate inspection of 626 factory `.SerumPreset` files from the supplied 2.1.5 installer. These factory presets were authored as versions **2.0.11–2.0.15**; the installer version does not make them 2.1.5 feature fixtures. The factory corpus is a finite sample, so absence from it does not prove a feature absent from Serum 2. The machine-readable [corpus schema](SERUM2_CORPUS_SCHEMA.json) lists 515 distinct explicit `plainParams` paths, 799 structural paths, 49 observed modulation source IDs, 214 modulated destination type/parameter pairs, observed string enum values, 16 FX module names, and reference-field counts. The provided 2.1.2 user preset is a separate fixture.
 

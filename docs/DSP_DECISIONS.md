@@ -1,5 +1,98 @@
 # DSP decisions
 
+## Measured EQ modes with native state-variable processing (2026-10-20)
+
+Original normal-host tones establish shelf0/bell1/cut2 and nonlinear Q travel.
+New imports select `eqMeasuredModes`, preserving raw state separately. The
+first direct-form prototype was rejected by a rapid coefficient-change test;
+the final path uses existing native trapezoidal SVF state with2ms control
+slewing. First binding starts at requested controls, and missing fields retain
+the older EQ path. Ninety static tone comparisons differ by at most0.001385dB;
+full-chain levels remain mixed and the source-only gap is unresolved. See
+[design, public mathematical sources and limitations](EQ_MODES_AND_RESONANCE.md).
+
+## Independent fast band detector for new imports (2026-10-20)
+
+Normal editor/host automation and original sine steps at100/1000/10000Hz
+confirm the bounded near-invariant reference multiband attack response. New
+imports select a0.1ms native band detector independently of global attack;
+this is an original modeling choice, not a reference internal time constant.
+Single-band and missing-field native behavior retain global attack. Median
+dry-relative gain-envelope RMSE drops4.939 to2.151dB across18 cases. Full-chain
+levels remain mixed, including about11dB additional attenuation in two musician
+cases. No compensating gain is fitted to hide that remaining discrepancy.
+Prepared processing adds no allocations, locks or I/O. See
+[measurements and limitations](COMPRESSOR_BAND_ATTACK.md).
+
+## Compressor makeup and optional dry-phase compensation (2026-10-19)
+
+Normal-host original controls verify an affine multiband makeup coordinate and
+the static compensated-wet/dry choice. New imported fields select those semantics;
+missing fields retain previous native behavior. Original detector/crossovers
+remain in use, with prepared2ms makeup slewing. Twenty timing curves show
+unresolved transient differences; no timing algorithm was fitted to the initial
+single-signal characterization. See [evidence and public DSP reference](COMPRESSOR_GAIN_MIX.md).
+
+## Independent compressor curve with measured control coordinates (2026-10-19)
+
+177 normal-host original-sine controls expose ignored multiband globals and
+incorrect single-band BELOW gating. A new native model combines quadratic
+threshold coordinates, local position, global/local downward strength, bipolar
+below strength, physical deadbands and separate branch bypass. The gain computer
+is an independent bounded piecewise-linear dB curve; existing native detection
+and phase-coherent crossovers remain. Fixed arrays slew curve controls over2ms.
+Old native saves and native creative defaults retain their prior numeric model.
+See [derivation, public DSP reference and limitations](COMPRESSOR_CONTROLS.md).
+Steady-level agreement does not prove transient or full-preset equivalence.
+
+## Embedded audio stays outside the processing callback (2026-10-19)
+
+Inline planar audio is decoded into immutable native samples on the control
+thread. Independent versioned float32 native serialization preserves recall
+without dispatching Serum state; spectral analysis remains a derived cache
+prepared before publication. Bounds and malformed-data errors are explicit.
+Original inline-versus-file oracle controls verify channel/rate behavior; this
+changes asset preparation, not the native DSP algorithms. See
+[design and evidence](EMBEDDED_AUDIO.md).
+
+## Tighter oscillator output filtering (2026-10-19)
+
+An independent analytic PM test isolated foldback to the previous output FIR
+transition. New patches/imports select an original 131-tap symmetric Kaiser/sinc
+decimator; old native state retains the 63-tap path. Exact 32/48-sample delays
+align plain and warped wavetable/SUB paths at 2x/4x. The wide PM sweep's worst
+4x unwanted energy improves from -66.66 to -93.05 dB; extreme 2x remains near
+-31.3 dB. Near-Nyquist attenuation, additional output/feedback delay and fixed
+state memory are explicit tradeoffs. See [design and sources](OUTPUT_DECIMATOR_QUALITY.md).
+
+## External audio-rate source reconstruction (2026-10-19)
+
+New wavetable/SUB external FM/PM/RM/AM families reconstruct sources at internal
+substeps with an original fixed four-phase cardinal windowed-sinc FIR. Its
+24-sample modulation-path delay is shared across 2x/4x modes; native state
+missing the independent model flag retains held sources. The 144-case PM sweep
+checks unwanted energy and analytic sideband magnitudes. 4x median unwanted
+energy drops 68.17 dB; intended component error stays below .0012 dB. Extreme
+2x folding and 4x output-FIR transition leakage remain measured limitations.
+This changes source phase/feedback timing and has a CPU cost; it does not
+certify Serum modulation semantics or whole-engine quality. See
+[design, primary sources and limits](AUDIO_RATE_MODULATION.md).
+
+## Native quality revision (2026-10-19)
+
+Measured neutral multiband cancellation and hidden loudness matching motivated
+an independently versioned phase-coherent model: upper-crossover allpass
+compensation on the low band, phase-matched parallel dry audio, explicit makeup,
+continuous upward floor and smoothed output controls. Missing native state
+fields retain legacy behavior. Wet=0 retains allpass phase; module bypass is
+sample transparent. A separate 4× filter-warp processing-rate error is fixed.
+See [design, sources, measurements and limits](NATIVE_DSP_QUALITY.md). The new
+coherent PM fixture shows little 4× benefit in that case, so wider antialiasing
+work remains open. These are native quality corrections, not a claim of Serum
+multiband calibration or whole-engine professional readiness.
+
+## Historical first-slice design
+
 The native engine is still an incomplete instrument rather than a professional-quality final DSP implementation. It reads preloaded mipmapped wavetable frames, runs bounded polyphonic voices, Env 1, typed modulation routes, a small ZYG state-variable filter family and the first oversampled warp subset. No claim of broad Serum filter, oscillator or FX coverage follows from these vertical slices.
 
 | First-slice choice | Why now | Limitation and replacement path |
@@ -134,3 +227,93 @@ Related engine fixes: `setTransport` no longer overwrites the beat clock while t
 - `Envelope.restartOnSteal` (Serum `kParamVoiceStealRestart`, default on): when a still-sounding voice is re-used (poly steal or mono non-legato retrigger) and the flag is off, each envelope re-enters attack from `max(start, current level)` instead of from `start`. Inferred from the parameter name and observed default (only explicit 0 values occur in the corpus); not oracle-verified. Test: `core_tests` mono retrigger keeps >4x the level with the flag off.
 - Editor feed: after each render chunk the engine publishes OSC A–C modulated WT position and warp amounts of the newest held voice through relaxed `std::atomic<float>` stores (`SynthEngine::oscDisplayState`); the processor mirrors mono output into an 8192-sample ring of relaxed atomics (`copyScope`). Both are lock- and allocation-free; torn reads only blur one display frame.
 - Tuning switches (`kParamNoteCurveApplyTuning`, `kParamPitchExpressionApplyTuning`) are typed but inert: ZYG has no microtuning tables, so equal temperament is used and a diagnostic is raised only when a switch is on. `kParamS1Compatibility` is typed and always diagnosed as not rendered.
+
+## Controlled Serum reference calibration (2026-10-17)
+
+The historical “no oracle” assumptions above are superseded only where measured in [SERUM_ORACLE_MEASUREMENTS.md](SERUM_ORACLE_MEASUREMENTS.md). Native `Patch` stores optional envelope curve families, time units, gain powers, filter-frequency bounds, table interpolation/bin position, detune law/polarity/phase and distortion gain settings. The Serum adapter selects measured values; the engine remains independent and has no proprietary implementation dependency. Existing native presets default to their prior behavior.
+
+LFO sync maps the measured 43-position host grid into quarter-note durations. Empty imported LFO curves become a triangle, while empty native curves keep the native fallback. Scalar source curves use existing allocation-free curve evaluation; imported velocity maps round to MIDI steps. Nonlinear scalar bend and legato interpolation are not calibrated; scalar legato with portamento is diagnosed. Matrix aux curves are still not applied. The overdrive change fits small-signal gain while retaining the original waveshaper; it is not an exact distortion algorithm match.
+
+Complete-preset measurements remain necessary: matching oscillator/envelope level does not prove filter/FX/modulation character or spectral similarity. Private assets and reference audio are never build or release inputs.
+
+## JUCE 8 integration and further reference measurements (2026-10-18)
+
+The independent engine remains block based. JUCE `processBlock` passes raw output pointers through a bounded host-control bridge; `prepareToPlay` prepares resources and smoothing, and `ScopedNoDenormals` guards processing. APVTS initially exposes eight additive performance offsets so zero automation leaves imported patch values intact. Table/frame ramps are consumed per sample; the existing eight-sample filter/matrix control quantum remains. State format 3 stores APVTS separately from the independent patch. See `JUCE8_AUDIO_PIPELINE.md` for ownership, publication and remaining limits.
+
+Mip selection now keeps both interpolation levels band limited for the playback frequency. All six original SUB primitives have prepared mipmaps. Actual fundamentals at or above Nyquist are rejected without rejecting a bass just because a warp bandwidth estimate is large. This improves tested stationary cases; extreme nonlinear modulation still needs spectral measurements and oversampling work.
+
+Imported single-band compressors select an optional native family: fitted equivalent threshold gain `3.3 * ((1-control)^3 + 1e-6)`, measured makeup travel and approximately 90.091 ms default attack/release with ratio 4. The fitted gain includes ZYG's own signal staging and is not a claim about Serum's internal implementation. Original RMS detection and compression remain our DSP. Multiband retains its provisional native behavior and does not inherit this fit. Aggregate controller defaults use mixed domains and are reference observations, not a replacement parameter table. Matrix aux curves remain preserved but unevaluated and are now diagnosed explicitly.
+
+## Time-effect attack/tail correction (2026-10-18)
+
+New time-effect modules use fully wet endpoints and filtered first delay taps. Reference mode IDs map into the existing native stereo enum. Hall decay's observed UI/state conversion selects the original FDN's T60 target, independently of pre-delay. Hall low/high-cut directions now follow their documented meaning; frequency curves, intermediate mix law, early reflections and other reverb types remain provisional. Declared sparse defaults are applied only after checking the fields' domains. See `SERUM_ORACLE_MEASUREMENTS.md` for measured values and remaining sync limitations.
+
+`legacyTimeFx` keeps older native state on the historical model and bakes its implicit reverb defaults before applying the new default table. New modules and reimported Serum presets use the corrections. Reverb fractional-rate LFOs now have independent phase accumulators, eliminating the common-wrap jump in either model. Corrected size/pre-delay changes slew without allocation; buffers remain prepared outside the audio callback. This is original DSP repair and behavioral mapping, not proprietary algorithm reconstruction.
+
+## Native ladder feedback stability (2026-10-18)
+
+The reported persistent high-pitched tails were reproduced with local assets
+resolved and isolated to FX ladder filters. The original stage cascade fed back
+an integrator's stored state, adding effective loop phase lag. At high cutoff,
+moderate resonance and high FAT this could sustain a numerical limit cycle after
+the input stopped. The native cascade now closes negative feedback around its
+current-sample outputs using a monotone scalar solve: safeguarded Newton steps
+inside the saturator's bounded input interval, with at most 12 iterations and no
+allocation. Existing stage nonlinearities, slope taps and family voicing remain.
+This is an original ZYG numerical correction, with no binary-derived DSP code.
+
+Synthetic impulse-tail regressions cover 44.1/48/96 kHz, 1/10/20 kHz cutoff,
+moderate resonance and high Var. The existing resonance test checks a boost above
+unity and over three times the zero-resonance response instead of preserving an
+arbitrary amplitude threshold from the delayed-feedback model. Resonant response
+therefore remains intentional; the tests do not establish matching Serum filter
+transfer functions or stability under every time-varying parameter sequence.
+
+An omitted Serum FXFilter resonance now imports as zero, based on the previously
+measured controller defaults. Explicit imported values and existing native
+defaults remain intact. This correction is separate from the feedback solver.
+
+## Splitter subtree bypass (2026-10-18)
+
+Controlled reference observations establish graph semantics: whole-splitter
+bypass preserves input and skips descendants; branch bypass skips child effects
+but retains the split audio. ZYG implements these rules in its existing native
+recursive rack, retaining its own crossover and M/S equations. Appended Boolean
+parameter slots preserve existing native slot identities and JSON state. Branch
+offsets use a Boolean threshold; their reference modulation behavior is uncalibrated.
+
+Child counts are finite, bounded and clipped per branch to the remaining parent
+span before traversal. This prevents malformed nested counts from consuming a
+sibling or a stale module after rebinding. Prepared buffers and fixed pools
+remain unchanged; processing and binding add no allocations. Beyond two processed
+nesting levels or the splitter pool, a whole subtree passes through transparently
+instead of erroneously turning its children into a serial chain. Control-thread
+import diagnostics expose these limits, clipped topology and total module capacity.
+Solo and splitter output gain remain unsupported and preserved. Structural child
+counts cannot be modulated while a patch is bound; imported routes targeting
+those counts or unapplied splitter output gain remain unresolved explicitly.
+
+## Measured delay target timing (2026-10-19)
+
+Original-signal reference tests establish a fourth-power time coordinate and a
+12-position beat grid; see `SERUM_ORACLE_MEASUREMENTS.md`. The adapter selects
+the native `fourthPowerBeatGrid` timing model, including the measured free-time
+encoding offset and linked-state canonicalization. Raw source state is retained.
+Runtime target composition remains beats / current host beats-per-second,
+per-side offset, then Link. Native feedback/filter/interpolation and smoothing
+remain independent. No reference implementation was translated.
+
+Missing native `delayTimingModel` loads as `seconds`, preserving already saved
+projects even when they previously selected the corrected full-wet model.
+The new model uses a dedicated power-4 `ParamRange` for time modulation while
+keeping the existing parameter slots and physical stored values. Matrix offsets
+are still normalized deltas; reference modulation transitions/depth are not
+claimed calibrated. Reverb pre-delay sync is unchanged and unsupported.
+
+Prepare allocates 32 seconds of float delay storage per channel, using the
+existing ring's power-of-two capacity. This costs 64 MiB across four stereo
+delay units at 48 kHz, versus 4 MiB previously. Targets beyond 32 seconds clamp
+without changing the host BPM; a control-thread import diagnostic states the
+capacity limitation. With ordinary offsets this supports the entire static
+grid down to 45 BPM. Processing/binding do not allocate, lock, log or perform
+file I/O. Existing JUCE host-tempo delivery supplies the current BPM.

@@ -243,19 +243,58 @@ double FilterCore::tick(Chan& c, int channel, double in) noexcept {
         case FilterResponse::ladderAcid: {
             const double G = g1_[ci] / (1.0 + g1_[ci]);
             const double fat = 1.0 + 3.0 * clampd(p.var, 0.0, 1.0);
-            double res = 3.8 * clampd(p.reso, 0.0, 1.0), fbTap = c.ladder[3];
+            double res = 3.8 * clampd(p.reso, 0.0, 1.0);
+            int feedbackStages = 4;
             int tap = 3; double pre = 1.0;
             switch (p.type) {
                 case FilterResponse::ladder6: tap = 0; break;
                 case FilterResponse::ladder12: tap = 1; break;
                 case FilterResponse::ladder18: tap = 2; break;
                 case FilterResponse::ladderDirty: pre = 2.2; break;
-                case FilterResponse::ladderEms: tap = 1; res = 3.0 * clampd(p.reso, 0.0, 1.0); fbTap = c.ladder[1]; break;
-                case FilterResponse::ladderAcid: tap = 2; res = 3.4 * clampd(p.reso, 0.0, 1.0); fbTap = c.ladder[3]; break;
+                case FilterResponse::ladderEms: tap = 1; res = 3.0 * clampd(p.reso, 0.0, 1.0); feedbackStages = 2; break;
+                case FilterResponse::ladderAcid: tap = 2; res = 3.4 * clampd(p.reso, 0.0, 1.0); break;
                 default: break;
             }
             const double bias = p.type == FilterResponse::ladderDirty ? 0.15 : (p.type == FilterResponse::ladderAcid ? 0.08 : 0.0);
-            double stageInput = fastTanh(pre * (in - res * fastTanh(fbTap * fat)) + bias);
+            // Close feedback around the current TPT outputs. Feeding back an
+            // integrator's stored state adds phase lag and creates a spurious
+            // high-frequency limit cycle even at modest resonance/high cutoff.
+            // This scalar equation is monotone: every stage has a nonnegative
+            // slope and the outer feedback is negative. Safeguarded Newton
+            // therefore keeps the solution in the saturator's [-1, 1] range.
+            auto tanhSlope = [](double x) noexcept {
+                if (std::abs(x) >= 3.0) return 0.0;
+                const double x2 = x * x, d = 27.0 + 9.0 * x2;
+                return 9.0 * (x2 - 9.0) * (x2 - 9.0) / (d * d);
+            };
+            double stageInput = fastTanh(pre * in + bias);
+            if (res > 0.0) {
+                double lo = -1.0, hi = 1.0;
+                for (int iteration = 0; iteration < 12; ++iteration) {
+                    double x = stageInput, slope = 1.0, feedback = 0.0;
+                    for (int s = 0; s < feedbackStages; ++s) {
+                        const double low = G * x + (1.0 - G) * c.ladder[std::size_t(s)];
+                        slope *= G;
+                        feedback = low;
+                        if (s + 1 < feedbackStages) {
+                            if (p.type == FilterResponse::ladderEms) {
+                                const double den = 1.0 + std::abs(low);
+                                x = low / den; slope /= den * den;
+                            } else {
+                                x = fastTanh(low); slope *= tanhSlope(low);
+                            }
+                        }
+                    }
+                    const double fb = feedback * fat;
+                    const double u = pre * (in - res * fastTanh(fb)) + bias;
+                    const double residual = stageInput - fastTanh(u);
+                    if (std::abs(residual) < 1.0e-12) break;
+                    if (residual > 0.0) hi = stageInput; else lo = stageInput;
+                    const double derivative = 1.0 + pre * res * tanhSlope(u) * tanhSlope(fb) * fat * slope;
+                    const double next = stageInput - residual / derivative;
+                    stageInput = next > lo && next < hi ? next : 0.5 * (lo + hi);
+                }
+            }
             double out = 0.0;
             for (int s = 0; s < 4; ++s) {
                 auto& st = c.ladder[std::size_t(s)];

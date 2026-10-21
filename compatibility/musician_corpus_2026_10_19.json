@@ -1,0 +1,52 @@
+{
+  "schema": "zygzxg-private-musician-corpus-aggregate-1",
+  "date": "2026-10-19",
+  "files": 14,
+  "distinctPresets": 12,
+  "exactDuplicateFiles": 2,
+  "method": {
+    "reference": "Licensed Serum 2.1.5 in owned REAPER 7.82/x64",
+    "referenceSha256": "33369E196AE66D05D20485F3C5E800707DC34A5AD89C27959250D60387B2EA55",
+    "native": "Original ZYG native DSP, output-decimator correction",
+    "sampleRate": 48000,
+    "notes": [
+      36,
+      60
+    ],
+    "velocity": 127,
+    "bpm": 120,
+    "noteStartSeconds": 1,
+    "noteHoldSeconds": 4,
+    "commonAnalysisSeconds": 8,
+    "referenceOutput": "32-bit float; extra host apply-FX tail excluded",
+    "nativeOutput": "32-bit float, safety limiter disabled",
+    "levelMatching": false,
+    "envelopeWindowMs": 10
+  },
+  "referenceCases": 24,
+  "nativeCases": 24,
+  "finiteAudibleReferenceCases": 24,
+  "finiteAudibleNativeCases": 24,
+  "presetsWithMissingAssetDiagnostics": 1,
+  "presetsWithPartialFeatureDiagnostics": 8,
+  "acceptedState": {
+    "checkedSourceControlLeaves": 2896,
+    "retainedWithin1eMinus5": 2884,
+    "remainingDifferences": "On-string canonicalization, omitted disabled/default noise flag, and one empty-destination modulation slot cleared by the reference loader; retained privately. These counts verify loading, not semantic coverage."
+  },
+  "rmsDifferenceRangeDb": [
+    -19.945326880354287,
+    1.780117717567439
+  ],
+  "envelopeCorrelationRange": [
+    0.6338697729864124,
+    0.9916774706971763
+  ],
+  "priorities": [
+    "Embedded spectral audio payload loading and native recall",
+    "Single-band below-threshold/upward compressor mapping and full-rack levels",
+    "Serum 1 compatibility differences and modulation/filter/warp interactions"
+  ],
+  "limits": "One held note per pitch, default saved macros, fixed tempo; no macro sweeps, legato, velocity sweep, sustained polyphony or perceptual similarity certification. Low levels alone do not identify the responsible module. All presets/assets/state/reference audio remain private outside Git. No replacement factory assets created.",
+  "laterFollowup": "Initial corpus snapshot retained. The embedded spectral source is fixed in compatibility/embedded_audio_2026_10_19.json; all24 new renders resolve assets, other22 audio cases unchanged."
+}

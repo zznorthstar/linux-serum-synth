@@ -65,6 +65,7 @@ public:
     void resized() override;
 private:
     RetroScreen screen_;
+    CurvePoints mapping_;
     Toggle *mono_ = nullptr, *legato_ = nullptr;
     Spinner* poly_ = nullptr;
     int routes_ = 0, active_ = 0, poly_n_ = 8;

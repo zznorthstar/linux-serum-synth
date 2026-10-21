@@ -9,6 +9,9 @@ description = "Interoperability research and local asset indexing for ZYG-ZXG"
 requires-python = ">=3.11"
 dependencies = ["cbor2>=5.6", "zstandard>=0.22"]
 
+[project.optional-dependencies]
+oracle = ["numpy>=2", "soundfile>=0.13"]
+
 [project.scripts]
 zygzxg = "zygzxg.cli:main"
 

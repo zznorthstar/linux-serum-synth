@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include "OutputFir.h"
 
 namespace zyg {
 
@@ -33,10 +34,15 @@ inline constexpr std::array<double, 63> oversamplingFir {
 };
 
 struct OversampleState {
-    std::array<double, oversamplingFir.size()> history {};
+    // Mirrored tight-filter ring; the legacy path uses its first 63 entries.
+    std::array<double, 2 * tightOversamplingFir.size()> history {};
     std::size_t write = 0;
 };
 
-double downsample2x(OversampleState& state, double first, double second) noexcept;
+double downsample2x(OversampleState& state, double first, double second, bool tight = false) noexcept;
+
+// Substeps start at the base-sample timestamp; decimation retains the last
+// substep. (65-1)/2 = 32 and (65+2*65-3)/4 = 48 base samples.
+inline constexpr std::size_t tightDecimatorDelay2x = 32, tightDecimatorDelay4x = 48;
 
 }

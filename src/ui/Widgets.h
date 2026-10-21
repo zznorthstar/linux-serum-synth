@@ -162,6 +162,7 @@ public:
     Knob(UiContext& c, KnobSpec spec, Getter get, Setter set, int diameter = 24);
     void pull(const Patch& p) override;
     void setDiameter(int d) { diameter_ = d; repaint(); }
+    void setRange(double lo, double hi) { spec_.lo = lo; spec_.hi = hi; }
     void setArcColour(juce::Colour c) { style_.arc = c; repaint(); }
     void setLabelShown(bool s) { labelShown_ = s; repaint(); }
     void setDimmed(bool d) { if (dim_ != d) { dim_ = d; repaint(); } }

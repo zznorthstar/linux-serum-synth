@@ -115,7 +115,7 @@ def scan(root: str | Path) -> dict[str, Any]:
 
 
 def save_report(report: dict[str, Any], path: str | Path) -> None:
-    Path(path).write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    Path(path).write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def audit_assets(preset_root: str | Path, index: dict[str, Any]) -> dict[str, Any]:

@@ -1,0 +1,601 @@
+{
+  "date": "2026-10-20",
+  "method": "Original signals, normal licensed editor and host automation; independent native DSP",
+  "reference": {
+    "instrumentVersion": "2.1.5",
+    "host": "REAPER 7.82 Windows",
+    "sampleRate": 48000,
+    "float32": true,
+    "note": 60,
+    "velocity": 127,
+    "bpm": 120,
+    "noteStartSeconds": 1,
+    "noteHoldSeconds": 4,
+    "renderSeconds": 8
+  },
+  "nativeModel": {
+    "field": "compressorBandAttackMs",
+    "newImportValue": 0.1,
+    "missingNativeValue": -1,
+    "nativeCreativeDefault": -1,
+    "globalAttackRetainedForSingleBand": true,
+    "claimsReferenceInternalTimeConstant": false
+  },
+  "hostCoordinates": {
+    "points": [
+      0,
+      0.25,
+      0.5,
+      0.75,
+      1
+    ],
+    "plainMilliseconds": [
+      0.1,
+      62.59375,
+      250.075,
+      562.54375,
+      1000
+    ],
+    "formula": "0.1 + 999.9 * normalized^2",
+    "matrixCoordinateEquivalenceVerified": false
+  },
+  "controlledGainEnvelopes": {
+    "summary": {
+      "cases": 18,
+      "improved": 9,
+      "unchanged": 9,
+      "beforeMedianRmseDb": 4.938582527482483,
+      "afterMedianRmseDb": 2.1512866881867305
+    },
+    "cases": [
+      {
+        "label": "f100-down-a0.1",
+        "frequency": 100,
+        "mode": "down",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 1.0552630381933237,
+          "maxErrorDb": 8.910177601500564
+        },
+        "after": {
+          "rmseDb": 1.0552630382237016,
+          "maxErrorDb": 8.91017760219006
+        }
+      },
+      {
+        "label": "f100-down-a1000",
+        "frequency": 100,
+        "mode": "down",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 5.071084021115067,
+          "maxErrorDb": 10.896004194650484
+        },
+        "after": {
+          "rmseDb": 1.0552443060885808,
+          "maxErrorDb": 8.907462155841124
+        }
+      },
+      {
+        "label": "f100-up-a0.1",
+        "frequency": 100,
+        "mode": "up",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 2.15135960992301,
+          "maxErrorDb": 14.765562665078882
+        },
+        "after": {
+          "rmseDb": 2.151359609919988,
+          "maxErrorDb": 14.765562665078882
+        }
+      },
+      {
+        "label": "f100-up-a1000",
+        "frequency": 100,
+        "mode": "up",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 10.866740192432246,
+          "maxErrorDb": 24.200801895842634
+        },
+        "after": {
+          "rmseDb": 2.1512137664534725,
+          "maxErrorDb": 14.756888828187286
+        }
+      },
+      {
+        "label": "f100-both-a0.1",
+        "frequency": 100,
+        "mode": "both",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 2.224620840786762,
+          "maxErrorDb": 9.102910649982455
+        },
+        "after": {
+          "rmseDb": 2.224620840749345,
+          "maxErrorDb": 9.102910649982455
+        }
+      },
+      {
+        "label": "f100-both-a1000",
+        "frequency": 100,
+        "mode": "both",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 12.217425893443437,
+          "maxErrorDb": 32.59814055457108
+        },
+        "after": {
+          "rmseDb": 2.2241968188518806,
+          "maxErrorDb": 9.056923776796253
+        }
+      },
+      {
+        "label": "f1000-down-a0.1",
+        "frequency": 1000,
+        "mode": "down",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 0.6773622272963501,
+          "maxErrorDb": 9.877007820926522
+        },
+        "after": {
+          "rmseDb": 0.6773622273992597,
+          "maxErrorDb": 9.877007820926522
+        }
+      },
+      {
+        "label": "f1000-down-a1000",
+        "frequency": 1000,
+        "mode": "down",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 5.116068904364168,
+          "maxErrorDb": 14.220441809407802
+        },
+        "after": {
+          "rmseDb": 0.6771327068163175,
+          "maxErrorDb": 9.87711871543668
+        }
+      },
+      {
+        "label": "f1000-up-a0.1",
+        "frequency": 1000,
+        "mode": "up",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 1.4886785159197435,
+          "maxErrorDb": 8.794385058445414
+        },
+        "after": {
+          "rmseDb": 1.4886785179796662,
+          "maxErrorDb": 8.794385057494278
+        }
+      },
+      {
+        "label": "f1000-up-a1000",
+        "frequency": 1000,
+        "mode": "up",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 7.72284893985179,
+          "maxErrorDb": 31.692806870574543
+        },
+        "after": {
+          "rmseDb": 1.4885345700820707,
+          "maxErrorDb": 8.802887492968683
+        }
+      },
+      {
+        "label": "f1000-both-a0.1",
+        "frequency": 1000,
+        "mode": "both",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 1.858317898412433,
+          "maxErrorDb": 13.36792615661792
+        },
+        "after": {
+          "rmseDb": 1.8583179001138912,
+          "maxErrorDb": 13.367926158589995
+        }
+      },
+      {
+        "label": "f1000-both-a1000",
+        "frequency": 1000,
+        "mode": "both",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 10.211558686565448,
+          "maxErrorDb": 38.249107919466596
+        },
+        "after": {
+          "rmseDb": 1.8577239996527926,
+          "maxErrorDb": 13.349645485834223
+        }
+      },
+      {
+        "label": "f10000-down-a0.1",
+        "frequency": 10000,
+        "mode": "down",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 2.2115699911077433,
+          "maxErrorDb": 17.142720297399805
+        },
+        "after": {
+          "rmseDb": 2.2115699911202933,
+          "maxErrorDb": 17.142720297399805
+        }
+      },
+      {
+        "label": "f10000-down-a1000",
+        "frequency": 10000,
+        "mode": "down",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 7.2903985198775425,
+          "maxErrorDb": 21.74899172310149
+        },
+        "after": {
+          "rmseDb": 2.2121483530834847,
+          "maxErrorDb": 17.143796924531465
+        }
+      },
+      {
+        "label": "f10000-up-a0.1",
+        "frequency": 10000,
+        "mode": "up",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 4.395546733237312,
+          "maxErrorDb": 13.475181863462026
+        },
+        "after": {
+          "rmseDb": 4.395546733228831,
+          "maxErrorDb": 13.475181863462026
+        }
+      },
+      {
+        "label": "f10000-up-a1000",
+        "frequency": 10000,
+        "mode": "up",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 12.608271136142873,
+          "maxErrorDb": 32.054642273445715
+        },
+        "after": {
+          "rmseDb": 4.396699567599692,
+          "maxErrorDb": 13.524235863161309
+        }
+      },
+      {
+        "label": "f10000-both-a0.1",
+        "frequency": 10000,
+        "mode": "both",
+        "attack": 0.1,
+        "before": {
+          "rmseDb": 4.806081033849899,
+          "maxErrorDb": 16.26653841877573
+        },
+        "after": {
+          "rmseDb": 4.806081033636092,
+          "maxErrorDb": 16.2665384098947
+        }
+      },
+      {
+        "label": "f10000-both-a1000",
+        "frequency": 10000,
+        "mode": "both",
+        "attack": 1000.0,
+        "before": {
+          "rmseDb": 14.707763451146286,
+          "maxErrorDb": 37.315838011551875
+        },
+        "after": {
+          "rmseDb": 4.807769140888326,
+          "maxErrorDb": 16.4053885063024
+        }
+      }
+    ],
+    "binSeconds": 0.01,
+    "intervalSeconds": [
+      1.02,
+      4.95
+    ],
+    "dryRelative": true,
+    "levelMatched": false,
+    "latencyFitted": false
+  },
+  "nativeSyntheticCases": 34,
+  "musicianCorpus": {
+    "cases": 24,
+    "finiteAudible": 24,
+    "missingAssets": 0,
+    "unchangedAudio": 8,
+    "rmsErrorImproved": 3,
+    "rmsErrorWorsened": 13,
+    "maximumAdditionalAttenuationDb": 11.055089007459244,
+    "casesWithPartialDiagnostics": 8,
+    "rows": [
+      {
+        "caseId": "p00-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -11.2316970649877,
+        "afterRmsDifferenceDb": -11.77031966612876,
+        "beforeEnvelopeCorrelation": 0.9527734305880827,
+        "afterEnvelopeCorrelation": 0.9534356608796333,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p00-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.204082873424802,
+        "afterRmsDifferenceDb": -10.855883203826583,
+        "beforeEnvelopeCorrelation": 0.9479296031025839,
+        "afterEnvelopeCorrelation": 0.9530835890946051,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p01-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -6.821788448054395,
+        "afterRmsDifferenceDb": -7.111893398101625,
+        "beforeEnvelopeCorrelation": 0.8831154796472165,
+        "afterEnvelopeCorrelation": 0.8726828402482036,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p01-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -0.8166808895372348,
+        "afterRmsDifferenceDb": -0.8677742738303671,
+        "beforeEnvelopeCorrelation": 0.9825457067704005,
+        "afterEnvelopeCorrelation": 0.9826292157636443,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p02-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -13.705207368392252,
+        "afterRmsDifferenceDb": -14.761469177182718,
+        "beforeEnvelopeCorrelation": 0.7639916837783446,
+        "afterEnvelopeCorrelation": 0.7675113336993202,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p02-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -14.505188302078654,
+        "afterRmsDifferenceDb": -15.817661930965777,
+        "beforeEnvelopeCorrelation": 0.7662283524636155,
+        "afterEnvelopeCorrelation": 0.7724552287104415,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p03-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -10.493022451675085,
+        "afterRmsDifferenceDb": -11.174304693846661,
+        "beforeEnvelopeCorrelation": 0.9528977239967136,
+        "afterEnvelopeCorrelation": 0.9541205483375024,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p03-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -9.78053963496226,
+        "afterRmsDifferenceDb": -10.360109236223217,
+        "beforeEnvelopeCorrelation": 0.9442558699296661,
+        "afterEnvelopeCorrelation": 0.9455716216614674,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p04-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -4.033243260223692,
+        "afterRmsDifferenceDb": -4.033243260223692,
+        "beforeEnvelopeCorrelation": 0.7140739560916893,
+        "afterEnvelopeCorrelation": 0.7140739560916893,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p04-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -3.1328629012905154,
+        "afterRmsDifferenceDb": -3.1328629012905154,
+        "beforeEnvelopeCorrelation": 0.7126323536253789,
+        "afterEnvelopeCorrelation": 0.7126323536253789,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p05-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -7.115160522990429,
+        "afterRmsDifferenceDb": -8.040043013340998,
+        "beforeEnvelopeCorrelation": 0.9353628072720873,
+        "afterEnvelopeCorrelation": 0.9273242522536519,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p05-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -8.65632487930241,
+        "afterRmsDifferenceDb": -10.248698137120662,
+        "beforeEnvelopeCorrelation": 0.9729976155266502,
+        "afterEnvelopeCorrelation": 0.97737941915891,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p06-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": 1.780117717567439,
+        "afterRmsDifferenceDb": 1.780117717567439,
+        "beforeEnvelopeCorrelation": 0.7961584340155247,
+        "afterEnvelopeCorrelation": 0.7961584340155247,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p06-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -3.513657212854131,
+        "afterRmsDifferenceDb": -3.513657212854131,
+        "beforeEnvelopeCorrelation": 0.857732125812193,
+        "afterEnvelopeCorrelation": 0.857732125812193,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p07-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -19.945326880354287,
+        "afterRmsDifferenceDb": -19.945326880354287,
+        "beforeEnvelopeCorrelation": 0.8595328006521488,
+        "afterEnvelopeCorrelation": 0.8595328006521488,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p07-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -14.578071299190654,
+        "afterRmsDifferenceDb": -14.578071299190654,
+        "beforeEnvelopeCorrelation": 0.9067703613097944,
+        "afterEnvelopeCorrelation": 0.9067703613097944,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p08-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -10.828790702934405,
+        "afterRmsDifferenceDb": -10.81128580671517,
+        "beforeEnvelopeCorrelation": 0.8250326120571209,
+        "afterEnvelopeCorrelation": 0.8304573836584314,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p08-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -13.298481184043345,
+        "afterRmsDifferenceDb": -13.375616289492006,
+        "beforeEnvelopeCorrelation": 0.9854033695295001,
+        "afterEnvelopeCorrelation": 0.9905901481446061,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p09-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": 0.22439896123453806,
+        "afterRmsDifferenceDb": 0.22439896123453806,
+        "beforeEnvelopeCorrelation": 0.7246742469578478,
+        "afterEnvelopeCorrelation": 0.7246742469578478,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p09-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -1.8770153951350945,
+        "afterRmsDifferenceDb": -1.8770153951350945,
+        "beforeEnvelopeCorrelation": 0.6338697729864124,
+        "afterEnvelopeCorrelation": 0.6338697729864124,
+        "sampleIdentical": true
+      },
+      {
+        "caseId": "p10-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -0.9413571584321048,
+        "afterRmsDifferenceDb": -11.99644616589135,
+        "beforeEnvelopeCorrelation": 0.9058845909586658,
+        "afterEnvelopeCorrelation": 0.9645934325437103,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p10-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -0.7312103932565286,
+        "afterRmsDifferenceDb": -11.649804964762879,
+        "beforeEnvelopeCorrelation": 0.9121583535940394,
+        "afterEnvelopeCorrelation": 0.9701854874871555,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p11-n36",
+        "note": 36,
+        "beforeRmsDifferenceDb": -7.659615159007721,
+        "afterRmsDifferenceDb": -7.582427101489007,
+        "beforeEnvelopeCorrelation": 0.8772100603549702,
+        "afterEnvelopeCorrelation": 0.8741809923468894,
+        "sampleIdentical": false
+      },
+      {
+        "caseId": "p11-n60",
+        "note": 60,
+        "beforeRmsDifferenceDb": -10.958395585744206,
+        "afterRmsDifferenceDb": -10.885055459795495,
+        "beforeEnvelopeCorrelation": 0.9899233759734682,
+        "afterEnvelopeCorrelation": 0.988627948891866,
+        "sampleIdentical": false
+      }
+    ]
+  },
+  "retainedBankSmokeCases": 15,
+  "limitations": [
+    "Broadband and stereo/limiter behavior uncalibrated",
+    "Release, crossover phase and source latency remain partial",
+    "Global multiband attack modulation is overridden by the fixed native band detector",
+    "Full-chain gain remains substantially different in some musician presets",
+    "CLAP built but not hosted; Linux not rerun",
+    "Replacement factory assets deferred"
+  ],
+  "installedHost": {
+    "ownedPid": 6224,
+    "exit": 0,
+    "cases": 10,
+    "allFiniteAudible": true,
+    "exactRelations": [
+      {
+        "first": "corrected",
+        "second": "repeat",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "corrected",
+        "second": "recalled",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "corrected",
+        "second": "globalFast",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "corrected",
+        "second": "legacyFast",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "legacySlow",
+        "second": "missingField",
+        "maxDifference": 0.0
+      },
+      {
+        "first": "singleSlow",
+        "second": "singleFixed",
+        "maxDifference": 0.0
+      }
+    ],
+    "sidecarFreeRecall": true
+  },
+  "installedVst3Sha256": "14ACE45501DD4B0C8534281025DDC06A660A11A5C8D0F4905B0F278ED0599489",
+  "validation": {
+    "cppSuites": 8,
+    "dspChecks": 144,
+    "pythonInteropChecks": 7,
+    "windowsVst3Build": true,
+    "windowsClapBuild": true,
+    "installedHostCases": 10,
+    "linuxRerun": false,
+    "clapHosted": false
+  }
+}

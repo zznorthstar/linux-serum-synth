@@ -7,6 +7,7 @@
 #include "DspCommon.h"
 #include "Modulators.h"
 #include "Oversampling.h"
+#include "ModulationInterpolation.h"
 #include "Spectral.h"
 #include "Warp.h"
 #include "Patch.h"
@@ -32,9 +33,11 @@ struct OscVoiceState {
     std::array<UnisonVoice, maxUnison> uni {};
     int unisonCount = 1;
     std::array<OversampleState, 4> os {};   // [ch] first stage, [2 + ch] second stage (4x mode)
-    std::array<std::array<double, 24>, 2> align {};
+    std::array<std::array<double, tightDecimatorDelay4x>, 2> align {};
     std::size_t alignW = 0;
     std::array<WarpState, 2> warpState {};
+    std::array<ModulationInterpolator, 2> modulationInterpolation {};
+    std::array<int,2> interpolationSource {-1,-1};
     double lastOut = 0.0;
     double baseFreq = 440.0, baseSemis = 0.0;
     // multisample: region 0 uses pos/dir (with unison); layered regions 1..3 are single voices
@@ -79,8 +82,10 @@ struct OscInputs {
     const std::array<double, 7>* mods = nullptr; // last raw outputs of oscillators A,B,C,NOISE,SUB then filters 1, 2
     bool released = false;
     int oversampleLevel = 0;    // 0: 2x for warped oscillators, >=1: 4x
+    bool tightOutputDecimator = true;
     bool importedPatch = false; // preset came from an import (unresolved assets stay silent)
     std::uint64_t serial = 0;   // per-note counter used to seed random phase/start
+    const Oscillator* subTable = nullptr; // original harmonic mipmaps, prepared by the engine off-thread
 };
 struct OscOut { double l = 0.0, r = 0.0, raw = 0.0; bool oversampled = false; };
 

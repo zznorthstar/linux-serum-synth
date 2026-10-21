@@ -30,7 +30,7 @@ enum HyperD { hDetune, hDimESize, hDimEWet, hRate, hUnison, hWet, hRetrig };
 enum Phaser { aDepth, aDepth2, aFeedback, aFreq, aNumPoles, aRate, aWet, aWidth, aBeatSync };
 enum Reverb { rDelay, rFeedback, rFreq, rFreqB, rFreqC, rMode, rPreDelay, rSize, rVintageScale, rVintageScaleB, rWet, rWidth };
 enum Utils { uBalance, uHPF, uLFMono, uLFXover, uLPF, uPolarityL, uPolarityR, uWet, uWidth };
-enum Split { sFreq, sFreq2, sCount1, sCount2, sCount3 };
+enum Split { sFreq, sFreq2, sCount1, sCount2, sCount3, sBypass1, sBypass2, sBypass3 };
 // ZYG extensions.
 enum Pump { uDepth, uBeats, uShape, uHold, uAttack, uTrigger, uThresh, uRelease, uWetMix };
 enum PumpTrigger { pumpTempo = 0, pumpNote = 1, pumpSidechain = 2, pumpFollow = 3 };

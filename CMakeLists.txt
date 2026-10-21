@@ -20,10 +20,23 @@ if(ZYG_BUILD_CLAP)
     FetchContent_MakeAvailable(clap_juce_extensions)
 endif()
 
-find_library(ZSTD_LIBRARY NAMES zstd REQUIRED)
+if(WIN32)
+    # Reference/oracle builds on Windows; Linux releases keep system libzstd.
+    set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+    set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(ZSTD_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(zstd
+        GIT_REPOSITORY https://github.com/facebook/zstd.git
+        GIT_TAG v1.5.7 GIT_SHALLOW TRUE SOURCE_SUBDIR build/cmake)
+    FetchContent_MakeAvailable(zstd)
+    set(ZSTD_LIBRARY libzstd_static)
+else()
+    find_library(ZSTD_LIBRARY NAMES zstd REQUIRED)
+endif()
 
 add_library(zygzxg_core STATIC
     src/Patch.cpp
+    src/SampleSerialization.cpp
     src/FxParams.cpp
     src/Assets.cpp
     src/dsp/Filters.cpp
@@ -37,8 +50,15 @@ add_library(zygzxg_core STATIC
     src/SynthEngine.cpp
     src/Wavetable.cpp)
 target_include_directories(zygzxg_core PUBLIC src)
+if(WIN32)
+    target_include_directories(zygzxg_core PRIVATE ${zstd_SOURCE_DIR}/lib)
+endif()
 target_link_libraries(zygzxg_core PUBLIC nlohmann_json::nlohmann_json ${ZSTD_LIBRARY})
 set_target_properties(zygzxg_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# Original synthetic signals only: repeatable native DSP measurements, no assets/host needed.
+add_executable(zygzxg_dsp_quality tools/dsp_quality.cpp)
+target_link_libraries(zygzxg_dsp_quality PRIVATE zygzxg_core)
 
 juce_add_plugin(ZYGZXG
     COMPANY_NAME "ZYG-ZXG"
@@ -77,17 +97,27 @@ set(ZYG_UI_SOURCES
     src/ui/MatrixPage.cpp
     src/ui/GlobalPage.cpp
     src/ui/SeqEditors.cpp)
-target_sources(ZYGZXG PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp ${ZYG_UI_SOURCES})
+target_sources(ZYGZXG PRIVATE src/PluginProcessor.cpp src/HostParameters.cpp src/PluginEditor.cpp ${ZYG_UI_SOURCES})
 target_link_libraries(ZYGZXG PRIVATE ZYGZXGUIAssets zygzxg_core juce::juce_audio_utils juce::juce_dsp juce::juce_opengl)
 target_compile_definitions(ZYGZXG PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 juce_generate_juce_header(ZYGZXG)
 if(ZYG_BUILD_CLAP)
     clap_juce_extensions_plugin(TARGET ZYGZXG
         CLAP_ID "org.zygzxg.linuxserumsynth"
+        CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 1
         CLAP_FEATURES instrument synthesizer)
 endif()
 
 enable_testing()
+find_package(Threads REQUIRED)
+add_executable(zygzxg_patch_exchange_tests tests/patch_exchange_tests.cpp)
+target_link_libraries(zygzxg_patch_exchange_tests PRIVATE zygzxg_core Threads::Threads)
+add_test(NAME patch_exchange_tests COMMAND zygzxg_patch_exchange_tests)
+juce_add_console_app(zygzxg_host_parameter_tests PRODUCT_NAME "zygzxg_host_parameter_tests")
+target_sources(zygzxg_host_parameter_tests PRIVATE tests/host_parameter_tests.cpp src/HostParameters.cpp)
+target_link_libraries(zygzxg_host_parameter_tests PRIVATE zygzxg_core juce::juce_audio_processors juce::juce_recommended_config_flags)
+target_compile_definitions(zygzxg_host_parameter_tests PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+add_test(NAME host_parameter_tests COMMAND zygzxg_host_parameter_tests)
 add_executable(zygzxg_core_tests tests/core_tests.cpp)
 target_link_libraries(zygzxg_core_tests PRIVATE zygzxg_core)
 add_test(NAME core_tests COMMAND zygzxg_core_tests)
@@ -112,7 +142,7 @@ endif()
 option(ZYG_BUILD_UI_TOOLS "Build the offline UI snapshot tool" ON)
 if(ZYG_BUILD_UI_TOOLS)
     juce_add_console_app(zygzxg_ui_snapshot PRODUCT_NAME "zygzxg_ui_snapshot")
-    target_sources(zygzxg_ui_snapshot PRIVATE tools/ui_snapshot.cpp src/PluginProcessor.cpp src/PluginEditor.cpp ${ZYG_UI_SOURCES})
+    target_sources(zygzxg_ui_snapshot PRIVATE tools/ui_snapshot.cpp src/PluginProcessor.cpp src/HostParameters.cpp src/PluginEditor.cpp ${ZYG_UI_SOURCES})
     target_link_libraries(zygzxg_ui_snapshot PRIVATE ZYGZXGUIAssets zygzxg_core
         juce::juce_audio_utils juce::juce_dsp juce::juce_opengl juce::juce_gui_basics juce::juce_recommended_config_flags)
     target_compile_definitions(zygzxg_ui_snapshot PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_MODAL_LOOPS_PERMITTED=1)

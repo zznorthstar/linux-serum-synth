@@ -1,0 +1,243 @@
+{
+  "schema": "zygzxg-embedded-audio-1",
+  "date": "2026-10-19",
+  "scope": "Bounded planar mono/stereo embedded sample loading and independent native recall; original DSP unchanged",
+  "bounds": {
+    "minFrames": 2,
+    "maxFramesPerChannel": 4194304,
+    "maxChannels": 2,
+    "maxRate": 768000,
+    "finitePositiveRate": true,
+    "nonfiniteSamplesRejected": true
+  },
+  "nativeEncoding": "planar-f32le-base64-v1",
+  "supportedFamilies": [
+    "sample",
+    "granular",
+    "spectral"
+  ],
+  "oracle": {
+    "reference": "Licensed Serum2.1.5 / owned REAPER7.82 x64",
+    "cases": 9,
+    "sampleRates": [
+      24000,
+      48000,
+      96000
+    ],
+    "inlineVersusFileMaxDifferenceWithinEachInstrument": 0,
+    "conflictingParentCountsMaxDifferenceWithinEachInstrument": 0,
+    "measurements": [
+      {
+        "channels": 1,
+        "sampleRate": 24000,
+        "frames": 4096,
+        "variant": "inline",
+        "referencePeak": 0.1418454349040985,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 1,
+        "referenceInlineFileMaxDifference": 0.0,
+        "nativeInlineFileMaxDifference": 0.0
+      },
+      {
+        "channels": 1,
+        "sampleRate": 24000,
+        "frames": 4096,
+        "variant": "external",
+        "referencePeak": 0.1418454349040985,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 1
+      },
+      {
+        "channels": 2,
+        "sampleRate": 24000,
+        "frames": 4096,
+        "variant": "inline",
+        "referencePeak": 0.1418454349040985,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 2,
+        "referenceInlineFileMaxDifference": 0.0,
+        "nativeInlineFileMaxDifference": 0.0
+      },
+      {
+        "channels": 2,
+        "sampleRate": 24000,
+        "frames": 4096,
+        "variant": "external",
+        "referencePeak": 0.1418454349040985,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 2
+      },
+      {
+        "channels": 2,
+        "sampleRate": 24000,
+        "frames": 4096,
+        "variant": "counts",
+        "referencePeak": 0.1418454349040985,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 1,
+        "acceptedChannels": 1,
+        "referenceParentCountDifference": 0.0,
+        "nativeParentCountDifference": 0.0
+      },
+      {
+        "channels": 1,
+        "sampleRate": 96000,
+        "frames": 4096,
+        "variant": "inline",
+        "referencePeak": 0.1418687105178833,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 1,
+        "referenceInlineFileMaxDifference": 0.0,
+        "nativeInlineFileMaxDifference": 0.0
+      },
+      {
+        "channels": 1,
+        "sampleRate": 96000,
+        "frames": 4096,
+        "variant": "external",
+        "referencePeak": 0.1418687105178833,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 1
+      },
+      {
+        "channels": 2,
+        "sampleRate": 48000,
+        "frames": 4096,
+        "variant": "inline",
+        "referencePeak": 0.14186370372772217,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 2,
+        "referenceInlineFileMaxDifference": 0.0,
+        "nativeInlineFileMaxDifference": 0.0
+      },
+      {
+        "channels": 2,
+        "sampleRate": 48000,
+        "frames": 4096,
+        "variant": "external",
+        "referencePeak": 0.14186370372772217,
+        "nativePeak": 0.1412537544965744,
+        "acceptedFrames": 4096,
+        "acceptedChannels": 2
+      }
+    ]
+  },
+  "musicianPreset": {
+    "embeddedFrames": 13978,
+    "embeddedChannels": 2,
+    "sampleRate": 44100,
+    "missingDiagnosticsBefore": 2,
+    "missingDiagnosticsAfter": 0,
+    "comparisons": [
+      {
+        "note": 36,
+        "beforeRmsDifferenceDb": -7.453696017263535,
+        "afterRmsDifferenceDb": -6.936650301575607,
+        "beforeEnvelopeCorrelation": 0.8425891828706209,
+        "afterEnvelopeCorrelation": 0.8713053775952952,
+        "maxNativeAudioChange": 0.1673535481095314
+      },
+      {
+        "note": 60,
+        "beforeRmsDifferenceDb": -0.6876760414567222,
+        "afterRmsDifferenceDb": -0.5765982281783373,
+        "beforeEnvelopeCorrelation": 0.9846962361916178,
+        "afterEnvelopeCorrelation": 0.9845456893190752,
+        "maxNativeAudioChange": 0.15136048197746277
+      }
+    ]
+  },
+  "corpus": {
+    "renders": 24,
+    "finiteAudible": 24,
+    "missingAssets": 0,
+    "unchangedAudioCases": 22,
+    "changedAudioCases": 2,
+    "retainedBankSmokeCases": 15
+  },
+  "tests": {
+    "cppSuites": 8,
+    "cppSuitesPassed": 8,
+    "dspChecks": 133,
+    "pythonChecks": 7,
+    "preparedPlaybackAllocationFree": true,
+    "coreRecallWithoutProvenanceExact": true
+  },
+  "installedVst3Sha256": "07E29F67B7430F157138E51F1B521F6B85E1615746C13A1158529C262D679750",
+  "host": {
+    "ownedPid": 13984,
+    "exit": 0,
+    "embeddedFrames": 13978,
+    "embeddedChannels": 2,
+    "embeddedRate": 44100,
+    "sourceSamplesExact": true,
+    "recallWithoutSerumSidecar": true,
+    "cases": [
+      {
+        "label": "imported36",
+        "peak": 0.40256407856941223,
+        "rmsDb": -32.0405646618847
+      },
+      {
+        "label": "repeat36",
+        "peak": 0.40256407856941223,
+        "rmsDb": -32.0405646618847
+      },
+      {
+        "label": "recalled36",
+        "peak": 0.40256407856941223,
+        "rmsDb": -32.0405646618847
+      },
+      {
+        "label": "noSource36",
+        "peak": 0.27330446243286133,
+        "rmsDb": -32.55761037757263
+      },
+      {
+        "label": "imported60",
+        "peak": 0.4212680160999298,
+        "rmsDb": -27.28696394021648
+      },
+      {
+        "label": "repeat60",
+        "peak": 0.4212680160999298,
+        "rmsDb": -27.28696394021648
+      },
+      {
+        "label": "recalled60",
+        "peak": 0.4212680160999298,
+        "rmsDb": -27.28696394021648
+      },
+      {
+        "label": "noSource60",
+        "peak": 0.28041958808898926,
+        "rmsDb": -27.398041753494866
+      }
+    ],
+    "relations": [
+      {
+        "note": 36,
+        "recallMaxDifference": 0.0,
+        "repeatMaxDifference": 0.0,
+        "removedSourceMaxDifference": 0.1673535481095314
+      },
+      {
+        "note": 60,
+        "recallMaxDifference": 0.0,
+        "repeatMaxDifference": 0.0,
+        "removedSourceMaxDifference": 0.15136048197746277
+      }
+    ]
+  },
+  "clapBuilt": true,
+  "clapHostTestedThisPass": false,
+  "linuxRerun": false,
+  "limits": "Source restoration is not full-preset fidelity. Spectral analysis remains original mono/28-second-limited synthesis; character/warp/scan behavior uncalibrated. Noise, multisample children, convolution IRs, compressed embedded formats and >2 channels are outside this pass. Old native saves need source reimport. Private assets/audio/source state stay outside Git."
+}

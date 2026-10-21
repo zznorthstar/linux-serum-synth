@@ -29,7 +29,9 @@
       "mapped": "partial",
       "implemented": "partial",
       "tested": "partial",
-      "real_preset_verified": true
+      "real_preset_verified": true,
+      "windows_settings_2026_10_18": "Saved Windows content selection now uses USERPROFILE/.config/ZYG-ZXG/content-root.txt, avoiding packaged-process AppData redirection; prior AppData settings remain a fallback. Explicit missing-root controls reproduce silence in both reported factory examples. No proprietary assets are packaged.",
+      "embedded_sample_audio_2026_10_19": "Sample/granular/spectral embedded_audio supports bounded mono/stereo planar numeric channels, with native float32/base64 recall independent of Serum provenance. Actual payload dimensions and embedded sample rate take priority. Nine original oracle/native controls verify inline-versus-file equality within each instrument. The supplied spectral preset now resolves both channels; all24 musician renders have zero missing assets. Other embedded formats and spectral character remain partial. See docs/EMBEDDED_AUDIO.md and compatibility/embedded_audio_2026_10_19.json."
     },
     "wavetable_oscillator": {
       "researched": "partial",
@@ -97,7 +99,9 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "Filters 1 and 2 use independent ZYG trapezoidal filter state. Typed native Low/High 6/12/18/24 and Band/Notch 12/24 responses use one-pole and SVF stages. MgL6/MgL18/MgL24 use a separate nonlinear four-stage native ladder with resonance feedback and FAT saturation. These fifteen IDs cover 479 of 859 enabled filter instances in the inspected factory corpus. Raw Serum IDs remain preserved and are not read by DSP. Only Filter 1 is editable in the current UI. Other filter families, exact Serum transfer matching, and full stability/performance sweeps remain open."
+      "notes": "Filters 1 and 2 use independent ZYG trapezoidal filter state. Typed native Low/High 6/12/18/24 and Band/Notch 12/24 responses use one-pole and SVF stages. MgL6/MgL18/MgL24 use a separate nonlinear four-stage native ladder with resonance feedback and FAT saturation. These fifteen IDs cover 479 of 859 enabled filter instances in the inspected factory corpus. Raw Serum IDs remain preserved and are not read by DSP. Only Filter 1 is editable in the current UI. Other filter families, exact Serum transfer matching, and full stability/performance sweeps remain open.",
+      "calibration_2026_10_17": "Both imported frequency controls match a dense 101-position reference sweep within displayed rounding. Acoustic response, resonance and drive remain original and uncalibrated.",
+      "stability_2026_10_18": "Original current-sample nonlinear ladder feedback removes the reproduced high-cutoff FX-filter limit cycle in two user-reported presets. Synthetic impulse tails at 44.1/48/96 kHz and sparse FXFilter resonance import regressions pass. Original filter resonance/drive curves remain uncalibrated; this is not a Serum transfer-function match."
     },
     "routing": {
       "researched": "partial",
@@ -115,7 +119,8 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "Env 1 ADSHR and three native attack/decay/release curve bends render, are tested, and Env 1 can drive supported matrix destinations. Env 2-4, tempo sync, trigger/legato modes and exact Serum curve transfer remain unsupported. 2026-09-27: kParamVoiceStealRestart maps to native Envelope.restartOnSteal (off = a stolen/mono-retriggered voice re-attacks from its current level); covered by a core render test. Serum's exact steal semantics are inferred from the parameter name and remain unverified against an oracle."
+      "notes": "Env 1 ADSHR and three native attack/decay/release curve bends render, are tested, and Env 1 can drive supported matrix destinations. Env 2-4, tempo sync, trigger/legato modes and exact Serum curve transfer remain unsupported. 2026-09-27: kParamVoiceStealRestart maps to native Envelope.restartOnSteal (off = a stolen/mono-retriggered voice re-attacks from its current level); covered by a core render test. Serum's exact steal semantics are inferred from the parameter name and remain unverified against an oracle.",
+      "calibration_2026_10_17": "Measured beat-sync decoding, Env 1 sustain gain and exponential segment curves; native time units follow host BPM. Time modulation/legato remains partial."
     },
     "lfo": {
       "researched": "partial",
@@ -124,7 +129,8 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "Native sine LFO 1 plus imported free-running Lorenz, Rossler and random sample-and-hold types render per voice. The supplied 2.0.24 preset executes its original Lorenz LFO 1 to OSC A wavetable-position route. Tempo-synced, Path/custom, mode/direction/phase/rise/delay/smooth semantics remain preserved but unsupported."
+      "notes": "Native sine LFO 1 plus imported free-running Lorenz, Rossler and random sample-and-hold types render per voice. The supplied 2.0.24 preset executes its original Lorenz LFO 1 to OSC A wavetable-position route. Tempo-synced, Path/custom, mode/direction/phase/rise/delay/smooth semantics remain preserved but unsupported.",
+      "calibration_2026_10_17": "Measured sparse triangle/sync defaults and 43-position rate grid. Controlled normal 2 Hz cases within about 0.04 dB RMS; fast case differs 0.24 dB. Rise/delay/smooth, chaos and sync rate modulation uncalibrated."
     },
     "matrix": {
       "researched": "partial",
@@ -133,7 +139,8 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "All populated imported rows remain typed and visible. Env 1, velocity, note, supported LFOs and Macro 1-8 execute for OSC A/B/C wavetable position, dual-warp depth, or Filter 1/2 cutoff. The 2.0.24 fixture verifies imported Lorenz-to-WT-position and Macro 1-to-FM-depth routes; synthetic tests cover the new sources and destinations. Env 2-4, other sources/destinations, aux, curves and slew remain preserved but unsupported. 2026-09-27: UI can now create routes to every mapped continuous control (knob/spinner/fader) by drag-and-drop or a right-click source menu over the full catalog; ZYG-only MIDI CC 0-119 source added (engine-rendered, tested). Serum amount/curve/aux scaling is still unverified (see docs/SERUM_ORACLE_HANDOFF.md)."
+      "notes": "All populated imported rows remain typed and visible. Env 1, velocity, note, supported LFOs and Macro 1-8 execute for OSC A/B/C wavetable position, dual-warp depth, or Filter 1/2 cutoff. The 2.0.24 fixture verifies imported Lorenz-to-WT-position and Macro 1-to-FM-depth routes; synthetic tests cover the new sources and destinations. Env 2-4, other sources/destinations, aux, curves and slew remain preserved but unsupported. 2026-09-27: UI can now create routes to every mapped continuous control (knob/spinner/fader) by drag-and-drop or a right-click source menu over the full catalog; ZYG-only MIDI CC 0-119 source added (engine-rendered, tested). Serum amount/curve/aux scaling is still unverified (see docs/SERUM_ORACLE_HANDOFF.md).",
+      "calibration_2026_10_17": "Measured oscillator/master control-power scaling and imported velocity/note source maps. Aux curves are preserved but not applied; nonlinear curves and amount mappings across most destinations remain provisional."
     },
     "macros": {
       "researched": "partial",
@@ -150,7 +157,17 @@
       "mapped": "partial",
       "implemented": "partial",
       "tested": "partial",
-      "real_preset_verified": false
+      "real_preset_verified": false,
+      "calibration_2026_10_17": "Overdrive small-signal gain range measured; full-input drive-50 case differs +0.38 dB RMS. Other FX controls/character remain provisional.",
+      "calibration_2026_10_18": "Single-band threshold/makeup fitted against steady controlled audio; observed attack/release/ratio defaults mapped, native RMS detector retained as an independent design. Limiter/makeup tests within about 0.07 dB RMS. Ordinary dynamics remain partial; historical multiband full-input baseline differed about +11.9 dB before the native quality revision.",
+      "native_quality_2026_10_19": "Historical checkpoint, superseded for new Serum imports by compressor_controls_2026_10_19. New/imported modules select phaseCoherentMultiband: phase-aligned LR4 bands and parallel dry signal, explicit makeup, no hidden AGC, continuous upward floor and 2 ms output-control smoothing. Missing native model fields preserve legacy behavior. All 18 original-signal neutral cases are flat within 0.001 dB at 44.1/48/96 kHz across two crossover pairs and 0/50/100% mix. Wet=0 retains allpass phase; disable module for transparent bypass. Sparse imports disable absent per-band upward controls based on quiet reference fixtures; explicit band mappings remain provisional. Four retained sine levels differ -0.0134/-0.0134/-1.2923/+2.4766 dB RMS, versus historical +11.9312 dB at full input. Native DC transfer matches the selected threshold/ratio, not a reference dynamics calibration. Serum multiband curves/transients and crossover/threshold/ratio automation remain partial. The 4x stateful filter-warp sample-rate error is fixed; coherent PM still shows limited 4x alias benefit in the measured case. See docs/NATIVE_DSP_QUALITY.md and compatibility/native_dsp_quality_2026_10_19.json.",
+      "time_effects_2026_10_18": "New/reimported modules correct full-wet endpoints, first-repeat delay filtering, normal/ping-pong IDs, Hall decay versus pre-delay and low/high-cut direction. Reverb phase wrap and abrupt length changes repaired. Legacy native time-effect models retained. Intermediate mix, filter curves, early reflections and most effect character remain provisional. Delay sync and reverb pre-delay sync are explicitly diagnosed as unsupported pending grid calibration.",
+      "splitter_routing_2026_10_18": "37 controlled reference renders establish whole/per-band bypass, nested boundaries, following effects and both M/S branches. Native traversal skips bypassed subtrees, retains bypassed band signals and clips child spans to their parents. Boolean offsets have native regression coverage, not reference modulation calibration. Solo, bypass transitions and crossover response remain unverified. Imports diagnose two processed nesting levels, 32 splitter states, 96 modules, clipped counts and unsupported topology modulation/output gain.",
+      "delay_timing_2026_10_19": "60 primed reference passes plus 42 startup controls establish a fourth-power time coordinate, twelve beat divisions, eleven switching neighborhoods, free-time encoding offset and linked-state canonicalization. New imports select an independently serialized timing model; missing native model fields preserve seconds behavior. Prepared targets cap at 32 seconds (full ordinary grid at BPM >=45); storage increases by 60 MiB per instance at 48 kHz. Time/sync modulation depths/transitions and first-note settling remain explicitly uncalibrated. Reverb pre-delay sync and full effect sound remain partial.",
+      "compressor_controls_2026_10_19": "New imports select compressorGlobalControls: inactive single-band BELOW; global multiband threshold/ratio/depth, bipolar local below strength, local downward strength/position, physical deadbands and separate branch bypass. Existing native detector/crossovers remain independent. All177 original steady48kHz sine cases differ <=.538dB, isolated middle55 <=.051dB; matched126 baseline max60.038dB. Fixed-array2ms control slewing;138 DSP checks pass. Missing native flag retains old numeric processing; native creative defaults unchanged. Typed static deadband/bypass fields are not matrix destinations. Transients/crossover/makeup/automation depths and full sound remain partial. See docs/COMPRESSOR_CONTROLS.md and compatibility/compressor_controls_2026_10_19.json.",
+      "compressor_gain_mix_2026_10_19": "New imports select compressorAffineMakeup and compressorPhaseMatchedDry. Missing fields retain prior makeup/matched-dry behavior; native creative defaults unchanged. Static makeup/mix max RMS error1.479\u2192.037dB in29 original48kHz/261.626Hz cases. Twenty timing curves characterize remaining differences; detector/timing unchanged and21 step renders sample-identical. All24 musician renders finite/audible/missing0: eight levels closer,16 unchanged. Static phase field is not a matrix destination; transients/stereo/limiter/source-latency/full sound remain partial. See docs/COMPRESSOR_GAIN_MIX.md and compatibility/compressor_gain_mix_2026_10_19.json.",
+      "compressor_band_attack_2026_10_20": "New imports select independent fast native band detector (0.1 ms modeling choice). Missing native field retains global attack. Normal editor/host automation confirms bounded near-invariant reference attack response at three frequencies. Nine slow-attack cases improve, nine fast cases unchanged; median dry-relative gain-envelope RMSE4.939 to2.151dB. Full-chain levels remain mixed, including about11dB extra attenuation in two musician cases. See docs/COMPRESSOR_BAND_ATTACK.md and compatibility/compressor_band_attack_2026_10_20.json.",
+      "eq_modes_2026_10_20": "New imports select eqMeasuredModes: shelf/bell/cut, physical sparse defaults and independently fitted Q travel. Native TPT state with2ms control slewing resolves prototype rapid-coefficient instability. Missing native flag retains historical EQ processing. Ninety steady response comparisons improve maximum gain error54.694 to.001385dB. All24 musician cases finite/audible/missing0:13 levels closer,9 worse,2 sample-identical; one becomes over11dB quieter. Source generation and Bode/time effects remain partial. Existing EQ GUI mode choices unchanged. See docs/EQ_MODES_AND_RESONANCE.md and compatibility/eq_modes_2026_10_20.json."
     },
     "arp": {
       "researched": "partial",
@@ -185,7 +202,7 @@
       "tested": "partial",
       "real_preset_verified": true,
       "realtime_transport_playback_verified": true,
-      "notes": "Installed VST3 tested in separate REAPER instance with realtime MIDI, armed monitored track, nonzero track/master peaks at 48 kHz. PipeWire default sink monitor captured C4 tone after 12 s of silence (261.47 Hz FFT peak). INIT project save/reopen and editor instantiation were verified. User-edited Serum state reload, automation and other sample rates remain unverified."
+      "notes": "Historical Linux realtime checks retained. 2026-10-18 Windows REAPER 7.82: legacy native state loads, frame-offset automation changes audio, fresh instances restore state-3 APVTS values. VST3/CLAP rendered output is identical at 48 kHz. Live versus recalled frame cases match after the initial 10 ms automation ramp. Other sample rates, full preset fidelity and current editor behavior remain unverified."
     },
     "clap_host": {
       "researched": "partial",
@@ -195,7 +212,7 @@
       "tested": "partial",
       "real_preset_verified": false,
       "realtime_transport_playback_verified": true,
-      "notes": "Pinned clap-juce-extensions builds CLAP. Installed CLAP was inserted in REAPER with realtime MIDI item on armed monitored track; nonzero track/master peaks measured. Real Serum preset import and project reload in CLAP are not yet validated."
+      "notes": "Pinned clap-juce-extensions builds CLAP with one-sample parameter event resolution. Historical realtime MIDI/peak checks retained. 2026-10-18 Windows REAPER: legacy native state loads, frame-offset automation changes audio, fresh instances restore state-3 APVTS values and produce samples identical to VST3. This does not establish complete Serum preset sound compatibility or current editor behavior."
     },
     "native_zyg_preset": {
       "researched": "none",
@@ -204,7 +221,8 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": false,
-      "notes": "v2 JSON and VST3/CLAP host state retain typed patch, matrix, FX identities, LFO/macro/clip raw state, diagnostics and opaque Serum provenance. Local assets are references and reloaded; portable path handling and UI save/reopen host validation remain incomplete."
+      "notes": "Native JSON retains typed patch, matrix, FX identities, LFO/macro/clip raw state, diagnostics and opaque Serum provenance. Host state format 3 separately stores APVTS controls; versions 1/2 remain readable. Windows VST3/CLAP legacy loading and fresh-instance control restore verified 2026-10-18. Local assets remain references; portable paths and current UI save/reopen behavior remain incompletely validated.",
+      "embedded_sample_recall_2026_10_19": "Pathless sample-family buffers serialize in versioned independent embeddedSample format, with strict bounds/base64/finite-data validation. Core tests cover sample/granular/spectral, and eight fresh-plugin REAPER VST3 cases verify exact affected-preset recall without original Serum bytes or raw/unknown oscillator sidecars. Derived spectral caches rebuild on the control thread. Older native saves need original source reimport."
     },
     "wavetable_warp": {
       "researched": "partial",
@@ -213,7 +231,9 @@
       "implemented": "partial",
       "tested": "partial",
       "real_preset_verified": true,
-      "notes": "Importer reads observed kParamWarpMenu/Menu2 fields and maps a bounded native subset. Dual phase maps and dual amplitude operations each process in slot order; mixed phase/amplitude order is provisional. Audio-rate source sampling is independent of oscillator render order. The 2.0.24 fixture uses kFM_OSC with a zero-level OSC B source and macro-modulated depth. OSC/OSC2 source ordering is an inference pending oracle verification. PD, FMX/FMP, Self PD, Sync, Remap, filter-source modulation, numerous distortion IDs and 4x/8x modes remain unsupported."
+      "notes": "Importer reads observed kParamWarpMenu/Menu2 fields and maps native warp families. Dual phase maps and dual amplitude operations each process in slot order; mixed phase/amplitude order is provisional. Audio-rate source snapshots are independent of oscillator render order. The 2.0.24 fixture uses kFM_OSC with a zero-level OSC B source and macro-modulated depth. OSC/OSC2 reference ordering, curves and phase relationships remain uncalibrated. Native PD, FMX/FMP, Self PD, Sync, Remap and filter-source warps execute through the 2x/4x path; this is implementation coverage, not reference equivalence. 8x and broader alias/character calibration remain open.",
+      "audio_source_reconstruction_2026_10_19": "New native/imported wavetable/SUB oscillators reconstruct external FM/FMX/FMP/PM/RM/AM sources using an original fixed four-phase 48-tap cardinal windowed-sinc FIR. Both modes add 24 input samples of modulation-path delay; older native state missing bandlimitedAudioModulation retains held sources. Same-source dual slots share reconstruction. All 144 controlled PM numeric legacy measurements reproduce baseline exactly. New median unwanted-energy reductions are 26.20 dB at 2x and 68.17 dB at 4x; intended-sideband error stays below .0012 dB. Extreme 2x aliasing, 4x output-decimator transition leakage, self feedback, matrix/spectral source reconstruction, reference phase/dynamics and broad CPU budgets remain open. See docs/AUDIO_RATE_MODULATION.md and compatibility/audio_modulation_quality_2026_10_19.json.",
+      "output_decimator_2026_10_19": "New native/imported patches select original 131-tap Kaiser/sinc output filtering and exact 32/48-sample plain/warped wavetable/SUB alignment. Older native state missing tightOutputDecimator or globals retains the old filter/delays. Worst 4x coherent PM unwanted energy improves -66.66 to -93.05 dB; extreme 2x folding remains near -31.3 dB. Output/raw-source feedback timing changes. Independent convolution, response, allocation, phase and migration tests pass; ten installed Windows VST3 recalls pass in an owned REAPER7.82 host. See docs/OUTPUT_DECIMATOR_QUALITY.md and compatibility/output_decimator_quality_2026_10_19.json."
     }
   },
   "tested_realtime_formats": [
@@ -224,5 +244,87 @@
     "2.0.24",
     "2.1.2"
   ],
-  "dsp_note": "2026-09-26: all categories are rendered by original ZYG DSP with provisional scales; 'partial' means not verified against a Serum oracle. See docs/DSP_DECISIONS.md."
+  "dsp_note": "2026-10-19: original DSP and JUCE 8.0.9 with partial behavioral calibration, including measured splitter bypass and delay target timing. Complete factory presets still differ substantially; some levels worsen when previously compensating errors are corrected. No full-preset fidelity claim. See docs/SERUM_ORACLE_MEASUREMENTS.md.",
+  "oracle_calibration": {
+    "date": "2026-10-19",
+    "reference": "Serum 2.1.5, REAPER 7.82/x64, Windows",
+    "method": "controlled host-state and audio measurements; original native DSP",
+    "measured_partial": [
+      "sparse defaults",
+      "envelope beat divisions and gain curves",
+      "oscillator/master modulation control power",
+      "master output placement",
+      "wavetable frame bins/crossfade",
+      "unison detune power/polarity/phase",
+      "filter frequency control",
+      "LFO sync grid and default triangle",
+      "overdrive small-signal drive gain",
+      "velocity/note source maps",
+      "single-band compressor equivalent threshold/makeup and sparse defaults",
+      "splitter whole/branch bypass and subtree boundaries",
+      "delay beat grid, free-time scale, offsets and linked-state loading"
+    ],
+    "full_preset_similarity_verified": false,
+    "report": "docs/SERUM_ORACLE_MEASUREMENTS.md",
+    "fx_declared_defaults": {
+      "modules": 16,
+      "entries": 203,
+      "report": "compatibility/serum2_fx_declared_defaults_2_1_5.json",
+      "domain_note": "Controller-declared values use mixed domains and are not a raw serialized preset default table."
+    }
+  },
+  "juce_architecture": {
+    "version": "8.0.9",
+    "host_parameters": "APVTS: 8 additive cutoff/table/frame performance controls, zero defaults, cached atomic reads, 10 ms smoothing",
+    "state_format": 3,
+    "legacy_state_readers": [
+      1,
+      2
+    ],
+    "patch_handoff": "immutable acknowledged publication with control-side coalescing",
+    "clap_parameter_event_resolution_samples": 1,
+    "report": "docs/JUCE8_AUDIO_PIPELINE.md"
+  },
+  "local_content": {
+    "saved_folder": "Environment override, then saved per-user content-root.txt, then platform content location; invalid roots remain diagnosed.",
+    "replacement_factory_pack": "Deferred until the user explicitly requests it; no replacement pack created."
+  },
+  "additional_private_corpus": {
+    "name": "Ghosthack Jump Up DnB Detonator",
+    "native_presets": 15,
+    "baseline_note": 36,
+    "baseline_velocity": 127,
+    "baseline_bpm": 120,
+    "baseline_non_silent_finite": 15,
+    "baseline_missing_assets": 0,
+    "followup_notes": [
+      36,
+      60
+    ],
+    "followup_finite_non_silent_renders": 30,
+    "followup_missing_assets": 0,
+    "fresh_windows_vst3_content_setting_verified": true,
+    "full_preset_similarity_verified": false
+  },
+  "supplied_musician_corpus_2026_10_19": {
+    "files": 14,
+    "distinct_presets": 12,
+    "matched_reference_native_cases": 24,
+    "finite_audible_cases_per_instrument": 24,
+    "presets_with_missing_asset_diagnostics": 0,
+    "presets_with_partial_feature_diagnostics": 4,
+    "full_preset_similarity_verified": false,
+    "report": "docs/MUSICIAN_PRESET_CORPUS.md",
+    "measurements": "compatibility/musician_corpus_2026_10_19.json",
+    "next_priorities": [
+      "Isolate pre-FX source level, oscillator/LFO/envelope/warp behavior; then Bode/time effects and remaining full-chain gain",
+      "Serum 1 compatibility and filter/warp/modulation interactions",
+      "Other embedded asset formats and wider performance/listening tests"
+    ],
+    "embedded_audio_followup": "compatibility/embedded_audio_2026_10_19.json",
+    "compressor_controls_followup": "compatibility/compressor_controls_2026_10_19.json",
+    "compressor_gain_mix_followup": "compatibility/compressor_gain_mix_2026_10_19.json",
+    "compressor_band_attack_followup": "compatibility/compressor_band_attack_2026_10_20.json",
+    "eq_modes_followup": "compatibility/eq_modes_2026_10_20.json"
+  }
 }

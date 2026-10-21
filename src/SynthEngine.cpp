@@ -1,4 +1,5 @@
 #include "SynthEngine.h"
+#include "Wavetable.h"
 #include "dsp/Filters.h"
 #include "dsp/FxEngine.h"
 #include "dsp/Modulators.h"
@@ -62,7 +63,9 @@ Dest resolveDest(const Patch& patch, const ModulationRoute& r) noexcept {
             d.lo = 0.0; d.hi = 1.0; d.flat = baseMacro + inst; d.global = true; break;
         case ModTarget::globalParam: {
             if (prm < 0 || prm >= int(GlobalParam::count)) return d;
-            const auto rg = globalParamRange(GlobalParam(prm)); d.lo = rg.lo; d.hi = rg.hi; d.flat = baseGlobal + prm; break;
+            const auto rg = globalParamRange(GlobalParam(prm)); d.lo = rg.lo; d.hi = rg.hi; d.flat = baseGlobal + prm;
+            d.global = patch.globals.masterAfterEffects && GlobalParam(prm) == GlobalParam::masterVolume;
+            break;
         }
         case ModTarget::routingParam: {
             if (inst < 0 || inst >= 7 || prm < 0 || prm >= int(RoutingParam::count)) return d;
@@ -84,6 +87,7 @@ Dest resolveDest(const Patch& patch, const ModulationRoute& r) noexcept {
             if (prm == fxLevelSlot) { d.lo = 0.0; d.hi = 1.0; }
             else if (std::size_t(prm) < table.size()) { d.lo = table[std::size_t(prm)].lo; d.hi = table[std::size_t(prm)].hi; }
             else return d;
+            if (m.fxType == FxType::eq && m.eqMeasuredModes && (prm == fx::eType1 || prm == fx::eType2)) d.lo = 0.0;
             d.fxModule = inst; d.fxSlot = prm; d.flat = -2; d.global = true; break;
         }
         default: break;
@@ -113,7 +117,7 @@ struct SynthEngine::Impl {
         std::array<std::array<double, 10>, 2> filt {};
         std::array<EnvParams, 4> env {};
         std::array<double, 7> routeBalance {}, routeBus1 {}, routeBus2 {};
-        double masterTuning = 440.0, transpose = 0.0, voiceAmp = 1.0, directVol = 1.0, portaTime = 0.0, envScale = 1.0, lfoScale = 1.0;
+        double masterTuning = 440.0, transpose = 0.0, voiceAmp = 1.0, masterVolume = 1.0, directVol = 1.0, portaTime = 0.0, envScale = 1.0, lfoScale = 1.0;
     };
     struct Voice {
         bool active = false, released = false, sustained = false, latched = false;
@@ -177,7 +181,11 @@ struct SynthEngine::Impl {
     // caches derived from the bound patch
     std::array<OscValues, 5> oscBase {};
     std::array<bool, 10> lfoSupported {};
-    std::array<LfoDefinition, 10> lfoDefs {};
+    HostControlValues hostControls {};
+    std::array<double, 3> hostFrameStep {};
+    std::array<Oscillator, 6> subTables;
+    HostControlStreams hostStreams {};
+    int hostStreamFirst = 0, hostStreamCount = 0, renderFirst = 0;
     std::array<bool, 10> lfoFree {};
     LfoDefinition legacySine;
     // global (chunk-rate) modulation state
@@ -206,6 +214,28 @@ struct SynthEngine::Impl {
     // ------------------------------------------------------------------ setup
     void prepare(double sampleRate) {
         sr = std::max(8000.0, sampleRate);
+        if (subTables[0].audio.empty()) {
+            // Original periodic primitives, not reference-plugin samples.
+            // Cached mipmaps also band-limit triangle/rounded SUB waveforms.
+            for (std::size_t shape = 0; shape < subTables.size(); ++shape) {
+                auto& table = subTables[shape]; table.mode = OscMode::wavetable;
+                table.audio.resize(2048); table.frameSize = 2048;
+                for (std::size_t i = 0; i < table.audio.size(); ++i) {
+                    const double phase = double(i) / double(table.audio.size());
+                    double value = std::sin(6.283185307179586 * phase);
+                    switch (SubShape(shape)) {
+                        case SubShape::pulse: value = phase < 0.25 ? 1.0 : -1.0; break;
+                        case SubShape::roundedRectangle: value = std::tanh(2.5 * value) / std::tanh(2.5); break;
+                        case SubShape::saw: value = 2.0 * phase - 1.0; break;
+                        case SubShape::square: value = phase < 0.5 ? 1.0 : -1.0; break;
+                        case SubShape::triangle: value = 1.0 - 4.0 * std::abs(phase - 0.5); break;
+                        default: break;
+                    }
+                    table.audio[i] = float(value);
+                }
+                prepareWavetableMipmaps(table);
+            }
+        }
         if (spectralShared->window.empty()) spectralShared->allocate();
         for (auto& vp : voices) {
             auto& v = *vp;
@@ -221,12 +251,22 @@ struct SynthEngine::Impl {
     void setPatch(const Patch* p) noexcept {
         patch = p;
         if (!p) return;
+        if (boundPreset != p->presetId) {
+            allNotesOff(); // cached sample regions belong to the previous instrument
+            boundPreset = p->presetId;
+        }
         for (std::size_t i = 0; i < 5; ++i)
             for (std::size_t k = 0; k < oscParamCount; ++k) oscBase[i][k] = oscBaseValue(p->oscillators[i], OscParam(k));
+        for (std::size_t i = 0; i < 3; ++i) {
+            const auto& osc = p->oscillators[i];
+            const auto frames = osc.frameSize > 0 ? osc.audio.size() / osc.frameSize : 0;
+            const auto span = osc.frameBinPosition ? frames : frames > 0 ? frames - 1 : 0;
+            hostFrameStep[i] = 256.0 / double(std::max<std::size_t>(1, span));
+        }
         for (std::size_t i = 0; i < 10; ++i) {
-            lfoDefs[i] = p->lfoDefinitions[i];
-            lfoSupported[i] = lfoDefs[i].shape != LfoShape::unknown;
-            lfoFree[i] = lfoDefs[i].mode == LfoMode::free || lfoDefs[i].mono;
+            const auto& def = p->lfoDefinitions[i];
+            lfoSupported[i] = def.shape != LfoShape::unknown;
+            lfoFree[i] = def.mode == LfoMode::free || def.mono;
         }
         if (p->lfoOneSine) { lfoSupported[0] = true; lfoFree[0] = false; }
         legacySine.rateHz = p->lfoOneRateHz;
@@ -237,7 +277,7 @@ struct SynthEngine::Impl {
     }
 
     const LfoDefinition& lfoDef(int i) const noexcept {
-        return (i == 0 && patch && patch->lfoOneSine) ? legacySine : lfoDefs[std::size_t(i)];
+        return (i == 0 && patch && patch->lfoOneSine) ? legacySine : patch->lfoDefinitions[std::size_t(i)];
     }
 
     // ------------------------------------------------------------ voice mgmt
@@ -340,8 +380,10 @@ struct SynthEngine::Impl {
     OscInputs oscInputs(Voice& v, int i) const noexcept {
         OscInputs in;
         in.osc = &patch->oscillators[std::size_t(i)]; in.v = &v.eff.osc[std::size_t(i)]; in.index = i;
+        if (in.osc->mode == OscMode::sub) in.subTable = &subTables[std::size_t(std::clamp(int(in.osc->subShape), 0, 5))];
         in.note = v.note; in.velocity = v.velocity; in.sampleRate = sr; in.bpm = bpm;
         in.masterTuning = v.eff.masterTuning; in.mods = &v.raw; in.released = v.released; in.serial = v.age; in.importedPatch = !patch->originalPreset.empty(); in.oversampleLevel = patch->globals.oversampling;
+        in.tightOutputDecimator = patch->globals.tightOutputDecimator;
         const auto& g = patch->globals;
         double bendSemis = 0.0;
         const float b = patch->globals.mpeEnabled ? bend[std::size_t(std::clamp(v.channel - 1, 0, 15))] : bend[0];
@@ -503,8 +545,11 @@ struct SynthEngine::Impl {
                 if (idx < 0 || idx >= 10 || !lfoSupported[std::size_t(idx)]) return false;
                 raw = global ? gLfoNow[std::size_t(idx)] : v.lfoVal[std::size_t(idx)]; break;
             case ModSource::macro: raw = (idx >= 0 && idx < 8) ? macroEff[std::size_t(idx)] : 0.0; break;
-            case ModSource::velocity: raw = v.velocity; break;
-            case ModSource::note: raw = clampd(v.note / 127.0, 0.0, 1.0); break;
+            case ModSource::velocity:
+                raw = evalCurve(patch->velocityCurve, v.velocity);
+                if (patch->quantizeVelocityCurve) raw = std::round(clampd(raw, 0.0, 1.0) * 127.0) / 127.0;
+                break;
+            case ModSource::note: raw = evalCurve(patch->noteCurve, clampd(v.note / 127.0, 0.0, 1.0)); break;
             case ModSource::modWheel: raw = modWheel; break;
             case ModSource::channelPressure: raw = pressure[std::size_t(std::clamp(v.channel - 1, 0, 15))]; break;
             case ModSource::polyPressure: raw = polyPressure[std::size_t(std::clamp(v.note, 0, 127))]; break;
@@ -616,22 +661,35 @@ struct SynthEngine::Impl {
         // global params first (masterTuning, transpose ...)
         auto goff = [&](GlobalParam p) { return v.off[std::size_t(baseGlobal + int(p))]; };
         auto& e = v.eff;
-        auto gmod = [&](GlobalParam gp, double base) { return applyModulation(base, goff(gp), globalParamRange(gp)); };
+        auto gmod = [&](GlobalParam gp, double base) {
+            auto range = globalParamRange(gp);
+            if (gp == GlobalParam::masterVolume) range.power = g.masterModulationPower;
+            return applyModulation(base, goff(gp), range);
+        };
         e.masterTuning = clampd(g.masterTuning, 400.0, 480.0);
         e.transpose = gmod(GlobalParam::transpose, g.transpose) + gmod(GlobalParam::masterTuning, 0.0);
         e.envScale = std::exp2((gmod(GlobalParam::envTimeScale, g.envTimeScale) - 50.0) / 25.0);
         e.lfoScale = std::exp2((gmod(GlobalParam::lfoTimeScale, g.lfoTimeScale) - 50.0) / 25.0);
         e.voiceAmp = gmod(GlobalParam::voiceAmp, g.voiceAmp);
+        e.masterVolume = gmod(GlobalParam::masterVolume, patch->masterVolume);
         e.directVol = gmod(GlobalParam::directVol, g.directVol);
         e.portaTime = gmod(GlobalParam::portamentoTime, g.portamentoTime);
         for (int i = 0; i < 5; ++i) {
             OscValues& ev = e.osc[std::size_t(i)];
             ev = oscBase[std::size_t(i)];
+            if (i < 3) {
+                at(ev, OscParam::tablePos) = clampd(at(ev, OscParam::tablePos)
+                    + 256.0 * hostControls[std::size_t(HostControl::positionA) + std::size_t(i)]
+                    + hostFrameStep[std::size_t(i)] * hostControls[std::size_t(HostControl::frameA) + std::size_t(i)], 0.0, 256.0);
+            }
             const int b = baseOsc + i * kOscStride;
             for (int t = 0; t < v.touchedN; ++t) {
                 const int flat = v.touched[std::size_t(t)];
                 if (flat >= b && flat < b + kOscStride && flat - b < int(OscParam::count)) {
-                    const auto p = std::size_t(flat - b); const auto rg = oscParamRange(OscParam(p));
+                    const auto p = std::size_t(flat - b); auto rg = oscParamRange(OscParam(p));
+                    const auto& osc = patch->oscillators[std::size_t(i)];
+                    if (OscParam(p) == OscParam::volume) rg.power = osc.volumeModulationPower;
+                    if (OscParam(p) == OscParam::detune) rg.power = osc.detuneModulationPower;
                     ev[p] = applyModulation(ev[p], v.off[std::size_t(flat)], rg);
                 }
             }
@@ -641,6 +699,7 @@ struct SynthEngine::Impl {
             auto& f = e.filt[std::size_t(i)];
             const auto& pf = patch->filters[std::size_t(i)];
             f = {pf.cutoff, pf.resonance, pf.drive, pf.var, pf.wet, pf.level, pf.stereo, pf.x, pf.y, 0.0};
+            f[0] = clampd(f[0] + hostControls[std::size_t(i)], 0.0, 1.0);
             for (int p = 0; p < int(FilterParam::count); ++p) {
                 const double o = v.off[std::size_t(baseFilter + i * 16 + p)];
                 if (o != 0.0) f[std::size_t(p)] = applyModulation(f[std::size_t(p)], o, filterParamRange(FilterParam(p)));
@@ -654,10 +713,11 @@ struct SynthEngine::Impl {
                 const double o = v.off[std::size_t(baseEnv + i * 8 + p)];
                 if (o != 0.0) vals[p] = applyModulation(vals[p], o, envParamRange(EnvParam(p)));
             }
-            const double scale = v.voiceEnvScale * e.envScale;
+            const double scale = v.voiceEnvScale * e.envScale * (pe.tempoSync ? 60.0 / bpm : 1.0);
             ep.attack = vals[0] * scale; ep.hold = vals[1] * scale; ep.decay = vals[2] * scale; ep.sustain = vals[3];
             ep.release = vals[4] * scale; ep.curve1 = vals[5]; ep.curve2 = vals[6]; ep.curve3 = vals[7];
             ep.start = pe.start; ep.end = pe.end;
+            ep.exponentialCurves = pe.exponentialCurves;
         }
         for (int s = 0; s < 7; ++s) {
             const auto& r = patch->routes[std::size_t(s)];
@@ -700,7 +760,7 @@ struct SynthEngine::Impl {
         const auto& pf = p.filters[std::size_t(i)];
         const auto& f = v.eff.filt[std::size_t(i)];
         fp.type = pf.response; fp.variant = pf.variant;
-        double hz = 20.0 * std::pow(1000.0, clampd(cutoffNorm, 0.0, 1.0));
+        double hz = filterCutoffHz(pf, cutoffNorm);
         if (pf.keyTrack) hz *= std::exp2((v.pitchNote - 60.0) / 12.0);
         hz = clampd(hz, 8.0, sr * 0.45);
         const double st = (clampd(f[std::size_t(FilterParam::stereo)], 0.0, 100.0) - 50.0) / 50.0;
@@ -749,7 +809,7 @@ struct SynthEngine::Impl {
             padGain[std::size_t(i)] = pf.pad ? 0.5 : 1.0;
         }
         const double velGain = 1.0 + patch->globals.velocityAmpDepth * (v.velocity - 1.0);
-        const double ampBase = velGain * patch->masterVolume * eff.voiceAmp;
+        const double ampBase = velGain * (patch->globals.masterAfterEffects ? 1.0 : eff.masterVolume) * eff.voiceAmp;
         // Each routing slot is shaped by the envelopes it selects (Env 1 by default).
         std::array<double, 7> slotNow {};
         for (int sl = 0; sl < 7; ++sl) {
@@ -772,6 +832,22 @@ struct SynthEngine::Impl {
             for (int i = 0; i < 5; ++i) {
                 const auto& osc = patch->oscillators[std::size_t(i)];
                 if (!osc.enabled || !v.zoneOk[std::size_t(i)]) { v.raw[std::size_t(i)] = 0.0; continue; }
+                // Host table motion follows every smoothed sample; matrix/LFO
+                // evaluation retains its existing control quantum. This avoids
+                // staircase clicks without changing imported stepped-table mode.
+                const int hostAt = renderFirst + at0 + k - hostStreamFirst;
+                if (i < 3 && hostAt >= 0 && hostAt < hostStreamCount) {
+                    const auto position = std::size_t(HostControl::positionA) + std::size_t(i);
+                    const auto frame = std::size_t(HostControl::frameA) + std::size_t(i);
+                    const auto read = [&](std::size_t index) noexcept {
+                        const float value = hostStreams[index] ? hostStreams[index][hostAt] : 0.0f;
+                        return std::isfinite(value) ? double(value) : 0.0;
+                    };
+                    const double base = clampd(at(oscBase[std::size_t(i)], OscParam::tablePos)
+                        + 256.0 * read(position) + hostFrameStep[std::size_t(i)] * read(frame), 0.0, 256.0);
+                    at(v.eff.osc[std::size_t(i)], OscParam::tablePos) = applyModulation(base,
+                        v.off[std::size_t(baseOsc + i * kOscStride + int(OscParam::tablePos))], oscParamRange(OscParam::tablePos));
+                }
                 const OscOut o = oscRender(v.osc[std::size_t(i)], inputs[std::size_t(i)]);
                 v.raw[std::size_t(i)] = o.raw;
                 const auto& ev = eff.osc[std::size_t(i)];
@@ -854,6 +930,10 @@ struct SynthEngine::Impl {
         for (int b = 0; b < blocks; ++b) {
             const int at0 = b * kBlock;
             const int bl = std::min(kBlock, len - at0);
+            const int hostAt = renderFirst + at0 - hostStreamFirst;
+            if (hostAt >= 0 && hostAt < hostStreamCount)
+                for (std::size_t k = 0; k < hostControlCount; ++k)
+                    hostControls[k] = hostStreams[k] && std::isfinite(hostStreams[k][hostAt]) ? hostStreams[k][hostAt] : 0.0f;
             tickSequencers(bl);
             for (auto& vp : voices) if (vp->active) renderVoiceBlock(*vp, bl, at0, b);
         }
@@ -894,6 +974,7 @@ struct SynthEngine::Impl {
             } else scFollow *= 0.9;
             fx.setContext(fc);
             evalGlobalMatrix(double(len) / sr);
+            renderFirst = first + done;
             renderChunk(len);
             // FX racks
             fx.processRack(0, mainL.data(), mainR.data(), len);
@@ -901,12 +982,17 @@ struct SynthEngine::Impl {
             if (fx.hasModules(1)) fx.processRack(1, b1L.data(), b1R.data(), len);
             if (fx.hasModules(2)) fx.processRack(2, b2L.data(), b2R.data(), len);
             const double g1 = clampd(g.fxBus1Vol, 0.0, 2.0), g2 = clampd(g.fxBus2Vol, 0.0, 2.0);
+            auto masterRange = globalParamRange(GlobalParam::masterVolume);
+            masterRange.power = g.masterModulationPower;
+            const double postGain = g.outputGain * (g.masterAfterEffects
+                ? applyModulation(patch->masterVolume, gOff[baseGlobal + int(GlobalParam::masterVolume)], masterRange) : 1.0);
             const bool oneToTwo = g.fxBus1Dest == 2;
             for (int i = 0; i < len; ++i) {
                 double l = mainL[std::size_t(i)] + dirL[std::size_t(i)], r = mainR[std::size_t(i)] + dirR[std::size_t(i)];
                 if (oneToTwo) { b2L[std::size_t(i)] += b1L[std::size_t(i)] * g1; b2R[std::size_t(i)] += b1R[std::size_t(i)] * g1; }
                 else { l += b1L[std::size_t(i)] * g1; r += b1R[std::size_t(i)] * g1; }
                 l += b2L[std::size_t(i)] * g2; r += b2R[std::size_t(i)] * g2;
+                l *= postGain; r *= postGain;
                 if (!std::isfinite(l)) l = 0.0;
                 if (!std::isfinite(r)) r = 0.0;
                 if (limiterOn) { l = safetyLimit(l); r = safetyLimit(r); }
@@ -923,6 +1009,13 @@ SynthEngine::SynthEngine() : impl_(std::make_unique<Impl>()) { impl_->prepare(44
 SynthEngine::~SynthEngine() = default;
 void SynthEngine::prepare(double sampleRate) { impl_->prepare(sampleRate); }
 void SynthEngine::setPatch(const Patch* patch) noexcept { impl_->setPatch(patch); }
+void SynthEngine::setHostControlBlock(const HostControlStreams& streams, int first, int count) noexcept {
+    impl_->hostStreams = streams; impl_->hostStreamFirst = first; impl_->hostStreamCount = std::max(0, count);
+    impl_->hostControls = {};
+}
+void SynthEngine::clearHostControls() noexcept {
+    impl_->hostControls = {}; impl_->hostStreams = {}; impl_->hostStreamCount = 0;
+}
 void SynthEngine::noteOn(int channel, int note, float velocity) noexcept { impl_->routeNoteOn(channel, note, velocity); }
 void SynthEngine::noteOff(int channel, int note, float releaseVelocity) noexcept { impl_->routeNoteOff(channel, note, releaseVelocity); }
 void SynthEngine::allNotesOff() noexcept { impl_->allNotesOff(); }

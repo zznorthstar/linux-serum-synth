@@ -7,8 +7,14 @@
 
 namespace zyg::dsp {
 
-inline double envelopeCurveShape(double progress, double curve) noexcept {
+inline double envelopeCurveShape(double progress, double curve, bool exponential = false) noexcept {
     const double x = clampd(progress, 0.0, 1.0);
+    if (exponential) {
+        const double c = clampd(curve / 100.0, 0.0, 1.0);
+        const double m = clampd(c <= 0.5 ? 4.0 * c * c * c : 1.0 - 4.0 * std::pow(1.0 - c, 3.0), 1e-12, 1.0 - 1e-12);
+        const double k = 2.0 * std::log((1.0 - m) / m);
+        return std::abs(k) < 1e-6 ? x : std::expm1(k * x) / std::expm1(k);
+    }
     const double bend = clampd((curve - 50.0) / 50.0, -1.0, 1.0);
     if (std::abs(bend) < 1.0e-6) return x;
     const double exponent = std::exp2(std::abs(bend) * 4.0);
@@ -19,6 +25,7 @@ struct EnvParams {
     double attack = 0.005, hold = 0.0, decay = 2.0, sustain = 1.0, release = 0.075;
     double curve1 = 50.0, curve2 = 66.6, curve3 = 66.6;
     double start = 0.0, end = 0.0;
+    bool exponentialCurves = false;
 };
 
 class EnvelopeGen {
@@ -39,7 +46,7 @@ public:
             case attack:
                 if (p.attack <= dt) { value_ = 1.0; stage_ = hold; t_ = 0.0; }
                 else {
-                    value_ = from_ + (1.0 - from_) * envelopeCurveShape(t_ / p.attack, p.curve1);
+                    value_ = from_ + (1.0 - from_) * envelopeCurveShape(t_ / p.attack, p.curve1, p.exponentialCurves);
                     if (t_ >= p.attack) { stage_ = hold; t_ = 0.0; value_ = 1.0; }
                 }
                 break;
@@ -50,7 +57,7 @@ public:
             case decay:
                 if (p.decay <= dt) { value_ = sus; stage_ = sustain; t_ = 0.0; }
                 else {
-                    value_ = 1.0 + (sus - 1.0) * envelopeCurveShape(t_ / p.decay, p.curve2);
+                    value_ = 1.0 + (sus - 1.0) * envelopeCurveShape(t_ / p.decay, p.curve2, p.exponentialCurves);
                     if (t_ >= p.decay) { stage_ = sustain; t_ = 0.0; value_ = sus; }
                 }
                 break;
@@ -58,7 +65,7 @@ public:
             case release:
                 if (p.release <= dt) { value_ = p.end; stage_ = idle; }
                 else {
-                    value_ = p.end + (from_ - p.end) * (1.0 - envelopeCurveShape(t_ / p.release, p.curve3));
+                    value_ = p.end + (from_ - p.end) * (1.0 - envelopeCurveShape(t_ / p.release, p.curve3, p.exponentialCurves));
                     if (t_ >= p.release || value_ <= p.end + 1.0e-7) { stage_ = idle; value_ = p.end; }
                 }
                 break;

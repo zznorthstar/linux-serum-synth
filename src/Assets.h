@@ -32,9 +32,12 @@ std::vector<SfzRegion> parseSfz(const std::string& text, SfzGroup* group = nullp
 std::vector<double> detectSliceMarkers(const SampleData& sample, double threshold);
 
 // The ZYG-ZXG content library (Serum-style folders: Tables, Samples, Multisamples, Impulses, ...).
-// Order: $ZYGZXG_CONTENT, then $XDG_DATA_HOME (or ~/.local/share)/ZYG-ZXG/Content. Empty if absent.
+// Order: $ZYGZXG_CONTENT, saved local setting, then the platform data folder.
+// Empty if absent. Settings contain only a path to the user's existing files.
 // Populate it with tools/install_serum_content.sh.
 std::filesystem::path defaultContentRoot();
+std::filesystem::path contentRootSettingsFile();
+std::filesystem::path readContentRootSetting(const std::filesystem::path& settingsFile);
 
 // Loads every external asset the patch references. Failures become diagnostics
 // (missing_asset / unsupported_asset) rather than exceptions.

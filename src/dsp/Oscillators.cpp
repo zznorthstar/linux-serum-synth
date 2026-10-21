@@ -1,4 +1,5 @@
 #include "Oscillators.h"
+#include <bit>
 
 namespace zyg::dsp {
 namespace {
@@ -45,9 +46,9 @@ float tableAtLevel(const Oscillator& osc, unsigned level, double phase, double p
     if (level > 0 && level <= osc.wavetableMipLevels && osc.wavetableMipmaps
         && osc.wavetableMipmaps->size() >= std::size_t(level) * osc.audio.size())
         samples = osc.wavetableMipmaps->data() + std::size_t(level - 1) * osc.audio.size();
-    const double scaled = clampd(position / 256.0, 0.0, 1.0) * double(frames - 1);
+    const double scaled = std::min(double(frames - 1), clampd(position / 256.0, 0.0, 1.0) * double(osc.frameBinPosition ? frames : frames - 1));
     const std::size_t frame = std::size_t(scaled);
-    const double mix = scaled - double(frame);
+    const double mix = osc.interpolateFrames ? scaled - double(frame) : 0.0;
     const double p = phase * size;
     const auto i = std::size_t(p) % size;
     const double fraction = p - std::floor(p);
@@ -64,7 +65,9 @@ float tableAtLevel(const Oscillator& osc, unsigned level, double phase, double p
 }
 float tableAt(const Oscillator& osc, double phase, double position, double frequency, double sr) noexcept {
     if (osc.wavetableMipLevels == 0 || frequency <= 0.0) return tableAtLevel(osc, 0, phase, position);
-    const double mipPosition = clampd(std::log2(double(osc.frameSize) * frequency / sr), 0.0, double(osc.wavetableMipLevels));
+    // Crossfade only levels whose highest harmonic is below Nyquist. Blending
+    // the previous (brighter) level here would reintroduce folded harmonics.
+    const double mipPosition = clampd(1.0 + std::log2(double(osc.frameSize) * frequency / sr), 0.0, double(osc.wavetableMipLevels));
     const auto lower = unsigned(std::floor(mipPosition));
     const auto upper = std::min(lower + 1, osc.wavetableMipLevels);
     const double mix = mipPosition - lower;
@@ -158,6 +161,8 @@ void OscVoiceState::reset() noexcept {
     for (auto& o : os) o = OversampleState{};
     for (auto& a : align) a.fill(0.0);
     alignW = 0; warpState = {}; lastOut = 0.0; regionCount = 0; regPos.fill(0.0); regDir.fill(1); regDone.fill(false);
+    for(auto& interpolation : modulationInterpolation) interpolation.reset();
+    interpolationSource.fill(-1);
     sliceStart = sliceEnd = -1.0; sliceSilent = false;
     sampleEnv.reset(); rows.fill(0.0); counter = 0; brown = 0.0; click = 0.0; noisePos = 0.0; noiseDone = false;
     colorLp.reset(); colorHp.reset();
@@ -173,7 +178,7 @@ void oscBlockUpdate(OscVoiceState& s, const OscInputs& in) noexcept {
     s.unisonCount = count;
     const double detune = clampd(at(v, OscParam::detune), 0.0, 1.0);
     const double range = std::max(0.0, osc.unisonRange);
-    const double maxCents = 100.0 * range * std::pow(detune, 1.5);
+    const double maxCents = 100.0 * range * std::pow(detune, clampd(osc.detuneExponent, 0.1, 8.0));
     const double blend = clampd(at(v, OscParam::blend) / 100.0, 0.0, 1.0);
     const double stereo = clampd(at(v, OscParam::unisonStereo) / 100.0, -1.0, 1.0);
     double weightSq = 0.0;
@@ -194,7 +199,7 @@ void oscBlockUpdate(OscVoiceState& s, const OscInputs& in) noexcept {
             default: break;
         }
         x.s = sp;
-        x.semis = shape * maxCents / 100.0 + stackSemis(osc.unisonStack, u, count);
+        x.semis = clampd(osc.detunePolarity, -1.0, 1.0) * shape * maxCents / 100.0 + stackSemis(osc.unisonStack, u, count);
         x.ratio = std::exp2(x.semis / 12.0);
         x.gain = count > 1 ? lerp(1.0 - clampd((std::abs(sp) - minAbs) / std::max(1.0 - minAbs, 1.0e-9), 0.0, 1.0), 1.0, blend) : 1.0;
         weightSq += x.gain * x.gain;
@@ -232,7 +237,7 @@ void oscNoteOn(OscVoiceState& s, const OscInputs& in) noexcept {
             const double randomRange = clampd(at(v, OscParam::randomPhase) / 100.0, 0.0, 1.0);
             for (int u = 0; u < count; ++u) {
                 const double randomOffset = s.rng.unipolar() * randomRange;
-                s.phase[std::size_t(u)] = std::fmod(at(v, OscParam::initialPhase) / 360.0 + double(u) / count + randomOffset, 1.0);
+                s.phase[std::size_t(u)] = std::fmod(at(v, OscParam::initialPhase) / 360.0 + (osc.spreadUnisonPhase ? double(u) / count : 0.0) + randomOffset, 1.0);
             }
             break;
         }
@@ -307,17 +312,30 @@ OscOut renderTable(OscVoiceState& s, const OscInputs& in) noexcept {
     const bool sub = osc.mode == OscMode::sub;
     if (!sub && osc.audio.empty()) return out;
     const bool os2 = oscUsesOversampling(osc);
+    const bool four = in.oversampleLevel >= 1;
     const int count = s.unisonCount;
     const bool mono = count == 1;
     out.oversampled = os2;
     const double amount0 = at(v, OscParam::warp1), amount1 = at(v, OscParam::warp2);
     const double var0 = at(v, OscParam::warpVar1), var1 = at(v, OscParam::warpVar2);
-    std::array<double, 2> modulators {};
+    std::array<std::array<double,4>,2> modulatorPhases {};
     for (std::size_t slot = 0; slot < 2; ++slot) {
-        const int src = osc.warpDefinitions[slot].sourceIndex;
-        if (src >= 0 && src < 7 && in.mods) modulators[slot] = (*in.mods)[std::size_t(src)];
+        const auto& warp=osc.warpDefinitions[slot];
+        const int src=warp.sourceIndex;
+        const double sample=src>=0 && src<7 && in.mods ? (*in.mods)[std::size_t(src)] : 0;
+        if(osc.bandlimitedAudioModulation && os2 && isModulatorWarp(warp.mode) && src>=0 && src<7) {
+            if(slot==1 && s.interpolationSource[0]==src) {
+                modulatorPhases[1]=modulatorPhases[0]; s.interpolationSource[1]=-1;
+            } else {
+                if(s.interpolationSource[slot]!=src) s.modulationInterpolation[slot].reset();
+                s.interpolationSource[slot]=src;
+                modulatorPhases[slot]=s.modulationInterpolation[slot].process(sample,four);
+            }
+        } else {
+            modulatorPhases[slot].fill(sample); s.interpolationSource[slot]=-1;
+        }
     }
-    auto renderSub = [&](double rateScale, double& outL, double& outR) noexcept {
+    auto renderSub = [&](double rateScale, std::size_t substep, double& outL, double& outR) noexcept {
         double accL = 0.0, accR = 0.0;
         for (int u = 0; u < count; ++u) {
             const auto& un = s.uni[std::size_t(u)];
@@ -329,7 +347,7 @@ OscOut renderTable(OscVoiceState& s, const OscInputs& in) noexcept {
             double freqMip = 1.0;
             for (std::size_t slot = 0; slot < 2; ++slot) {
                 const auto& w = osc.warpDefinitions[slot];
-                const double a = amt[slot], m = modulators[slot];
+                const double a = amt[slot], m = modulatorPhases[slot][substep];
                 switch (w.mode) {
                     case WarpMode::frequencyMod: freqScale += 8.0 * a * m; break;
                     case WarpMode::frequencyModX: freqScale *= std::exp2(3.0 * a * m); break;
@@ -342,14 +360,22 @@ OscOut renderTable(OscVoiceState& s, const OscInputs& in) noexcept {
                 }
             }
             lookup -= std::floor(lookup);
-            const double effFreq = std::abs(fu * freqScale) * freqMip;
+            const double fundamental = std::abs(fu * freqScale);
+            const double effFreq = fundamental * freqMip;
+            const bool ultrasonic = fundamental >= 0.5 * in.sampleRate;
             double sample;
-            if (sub) sample = subWave(osc.subShape, lookup, effFreq / in.sampleRate);
+            // Guard the actual fundamental, not the warp's conservative mip
+            // bandwidth estimate: a large phase derivative must not mute a bass.
+            if (ultrasonic) sample = 0.0;
+            else if (sub) sample = in.subTable ? tableAt(*in.subTable, lookup, 0.0, effFreq, in.sampleRate)
+                : subWave(osc.subShape, lookup, effFreq / in.sampleRate);
             else sample = tableAt(osc, lookup, at(v, OscParam::tablePos) + un.wtOff, effFreq, in.sampleRate);
             for (std::size_t slot = 0; slot < 2; ++slot) {
                 const auto& w = osc.warpDefinitions[slot];
                 if (w.mode == WarpMode::evenOdd) {
-                    const double other = sub ? subWave(osc.subShape, lookup + 0.5, effFreq / in.sampleRate)
+                    const double other = ultrasonic ? 0.0 : sub ? (in.subTable
+                        ? tableAt(*in.subTable, wrap01(lookup + 0.5), 0.0, effFreq, in.sampleRate)
+                        : subWave(osc.subShape, lookup + 0.5, effFreq / in.sampleRate))
                                              : tableAt(osc, wrap01(lookup + 0.5), at(v, OscParam::tablePos) + un.wtOff, effFreq, in.sampleRate);
                     sample += (amt[slot] - 0.5) * 2.0 * other;
                     sample *= 0.7;
@@ -357,7 +383,7 @@ OscOut renderTable(OscVoiceState& s, const OscInputs& in) noexcept {
                            && w.mode != WarpMode::frequencyModX && w.mode != WarpMode::frequencyModPhase
                            && w.mode != WarpMode::phaseMod && w.mode != WarpMode::selfPhase && w.mode != WarpMode::off
                            && w.mode != WarpMode::unknown) {
-                    sample = warpAmplitude(sample, lookup, w.mode, amt[slot], modulators[slot], s.warpState[slot], in.sampleRate * (os2 ? 2.0 : 1.0), vr[slot]);
+                    sample = warpAmplitude(sample, lookup, w.mode, amt[slot], modulatorPhases[slot][substep], s.warpState[slot], in.sampleRate / rateScale, vr[slot]);
                 }
             }
             accL += sample * un.gain * un.gL; accR += sample * un.gain * un.gR;
@@ -367,27 +393,26 @@ OscOut renderTable(OscVoiceState& s, const OscInputs& in) noexcept {
         outL = accL; outR = accR;
     };
     double l = 0.0, r = 0.0;
-    const bool four = in.oversampleLevel >= 1;
     if (os2 && !four) {
         double l0, r0, l1, r1;
-        renderSub(0.5, l0, r0); renderSub(0.5, l1, r1);
-        l = downsample2x(s.os[0], l0, l1);
-        r = mono ? l : downsample2x(s.os[1], r0, r1);
+        renderSub(0.5, 0, l0, r0); renderSub(0.5, 2, l1, r1);
+        l = downsample2x(s.os[0], l0, l1, in.tightOutputDecimator);
+        r = mono ? l : downsample2x(s.os[1], r0, r1, in.tightOutputDecimator);
     } else if (os2) {
         double sl[4], sr4[4];
-        for (int k = 0; k < 4; ++k) renderSub(0.25, sl[k], sr4[k]);
-        const double la = downsample2x(s.os[0], sl[0], sl[1]), lb = downsample2x(s.os[0], sl[2], sl[3]);
-        l = downsample2x(s.os[2], la, lb);
+        for (int k = 0; k < 4; ++k) renderSub(0.25, std::size_t(k), sl[k], sr4[k]);
+        const double la = downsample2x(s.os[0], sl[0], sl[1], in.tightOutputDecimator), lb = downsample2x(s.os[0], sl[2], sl[3], in.tightOutputDecimator);
+        l = downsample2x(s.os[2], la, lb, in.tightOutputDecimator);
         if (mono) r = l;
         else {
-            const double ra = downsample2x(s.os[1], sr4[0], sr4[1]), rb = downsample2x(s.os[1], sr4[2], sr4[3]);
-            r = downsample2x(s.os[3], ra, rb);
+            const double ra = downsample2x(s.os[1], sr4[0], sr4[1], in.tightOutputDecimator), rb = downsample2x(s.os[1], sr4[2], sr4[3], in.tightOutputDecimator);
+            r = downsample2x(s.os[3], ra, rb, in.tightOutputDecimator);
         }
     } else {
         double a, b;
-        renderSub(1.0, a, b);
+        renderSub(1.0, 0, a, b);
         // Unwarped sources are delayed by the decimator latency so layered oscillators stay in phase.
-        const std::size_t len = four ? 23 : 15;
+        const std::size_t len = in.tightOutputDecimator ? (four ? tightDecimatorDelay4x : tightDecimatorDelay2x) : (four ? 23 : 15);
         auto delay = [&](std::size_t ch, double x) noexcept { const double d = s.align[ch][s.alignW]; s.align[ch][s.alignW] = x; return d; };
         l = delay(0, a); r = mono ? l : delay(1, b);
         if (mono) s.align[1][s.alignW] = 0.0;
@@ -420,7 +445,7 @@ OscOut renderNoise(OscVoiceState& s, const OscInputs& in) noexcept {
             case NoiseType::white: x = s.rng.bipolar(); break;
             case NoiseType::pink: {
                 ++s.counter;
-                const unsigned tz = unsigned(__builtin_ctz(s.counter | 0x100u));
+                const unsigned tz = unsigned(std::countr_zero(s.counter | 0x100u));
                 s.rows[std::min<std::size_t>(tz, 8)] = s.rng.bipolar();
                 const double w = s.rng.bipolar();
                 double sum = w; for (auto row : s.rows) sum += row;
@@ -499,6 +524,8 @@ OscOut renderSampleOsc(OscVoiceState& s, const OscInputs& in) noexcept {
     double accL = 0.0, accR = 0.0;
     const double velGain = 1.0 - clampd(osc.velTrack, 0.0, 100.0) / 100.0 * (1.0 - in.velocity);
     for (int layer = 0; layer < layers; ++layer) {
+        if (multi && (s.regionIdx[std::size_t(layer)] < 0
+            || std::size_t(s.regionIdx[std::size_t(layer)]) >= osc.regions.size())) continue;
         const SampleRegion* region = multi ? &osc.regions[std::size_t(s.regionIdx[std::size_t(layer)])] : nullptr;
         const SampleData* sd = multi ? region->sample.get() : osc.sample.get();
         if (!sd || sd->frames() < 4) continue;

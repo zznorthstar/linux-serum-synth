@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <fstream>
 #include <iterator>
 #include <map>
@@ -230,11 +231,54 @@ std::vector<double> detectSliceMarkers(const SampleData& sd, double threshold) {
     return markers;
 }
 
+std::filesystem::path contentRootSettingsFile() {
+    namespace fs = std::filesystem;
+   #if defined(_WIN32)
+    // AppData can be redirected for packaged host/tool processes. A profile
+    // config path lets a user-selected content folder survive those boundaries.
+    if (const char* profile = std::getenv("USERPROFILE"); profile && *profile)
+        return fs::path(profile) / ".config" / "ZYG-ZXG" / "content-root.txt";
+    if (const char* appData = std::getenv("APPDATA"); appData && *appData)
+        return fs::path(appData) / "ZYG-ZXG" / "content-root.txt";
+   #else
+    if (const char* config = std::getenv("XDG_CONFIG_HOME"); config && *config)
+        return fs::path(config) / "ZYG-ZXG" / "content-root.txt";
+    if (const char* home = std::getenv("HOME"); home && *home)
+        return fs::path(home) / ".config" / "ZYG-ZXG" / "content-root.txt";
+   #endif
+    return {};
+}
+
+std::filesystem::path readContentRootSetting(const std::filesystem::path& settingsFile) {
+    if (settingsFile.empty()) return {};
+    std::ifstream stream(settingsFile, std::ios::binary);
+    std::string path; std::getline(stream, path);
+    if (!path.empty() && path.back() == '\r') path.pop_back();
+    if (path.starts_with("\xef\xbb\xbf")) path.erase(0, 3);
+    if (path.empty()) return {};
+    try {
+        const auto root = std::filesystem::u8path(path);
+        std::error_code error;
+        return root.is_absolute() && std::filesystem::is_directory(root / "Tables", error) ? root : std::filesystem::path{};
+    } catch (const std::exception&) { return {}; }
+}
+
 std::filesystem::path defaultContentRoot() {
     namespace fs = std::filesystem;
     std::error_code ec;
     auto usable = [&](const fs::path& p) { return !p.empty() && fs::is_directory(p / "Tables", ec); };
     if (const char* e = std::getenv("ZYGZXG_CONTENT")) if (usable(e)) return e;
+    if (auto configured = readContentRootSetting(contentRootSettingsFile()); !configured.empty()) return configured;
+   #if defined(_WIN32)
+    if (const char* appData = std::getenv("APPDATA"); appData && *appData) {
+        // Existing installations keep their saved AppData selection until the
+        // user next chooses a folder, which writes the profile setting above.
+        if (auto legacy = readContentRootSetting(fs::path(appData) / "ZYG-ZXG" / "content-root.txt"); !legacy.empty())
+            return legacy;
+        const auto installed = fs::path(appData) / "ZYG-ZXG" / "Content";
+        if (usable(installed)) return installed;
+    }
+   #endif
     fs::path base;
     if (const char* x = std::getenv("XDG_DATA_HOME"); x && *x) base = x;
     else if (const char* h = std::getenv("HOME"); h && *h) base = fs::path(h) / ".local" / "share";
@@ -290,7 +334,9 @@ void prepareAssets(Patch& patch, const AudioDecoder& decoder) {
                 }
                 if (osc.mode == OscMode::spectral && osc.sample && !osc.spectral) osc.spectral = buildSpectralAnalysis(*osc.sample);
                 if (osc.mode == OscMode::sample && osc.sample && osc.slicingMode == 1 && osc.sliceMarkers.empty()) osc.sliceMarkers = detectSliceMarkers(*osc.sample, 0.25);
-                if (!osc.sample && osc.asset.empty()) diag(patch, where, "missing_asset", "no audio asset reference");
+                if (!osc.sample && osc.asset.empty() && !std::any_of(patch.diagnostics.begin(),patch.diagnostics.end(),[&](const Diagnostic& d) {
+                    return d.path == where && d.status == "unsupported_asset";
+                })) diag(patch, where, "missing_asset", "no audio asset reference");
                 break;
             case OscMode::multisample:
                 if (osc.regions.empty()) {

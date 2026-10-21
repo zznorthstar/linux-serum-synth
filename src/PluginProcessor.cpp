@@ -41,12 +41,8 @@ void prepareAudioAssets(zyg::Patch& patch) {
 }
 }
 
-ZygProcessor::ZygProcessor()
-    : AudioProcessor(BusesProperties()
-          .withInput("Input", juce::AudioChannelSet::stereo(), false)       // unused main input (kept disabled) so the sidechain is an aux bus
-          .withInput("Sidechain", juce::AudioChannelSet::stereo(), false)
-          .withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
-    auto init = std::make_unique<zyg::Patch>();
+std::shared_ptr<const zyg::Patch> ZygProcessor::makeInitialPatch() {
+    auto init = std::make_shared<zyg::Patch>();
     init->name = "ZYG init";
     init->oscillators[0].enabled = true;
     init->oscillators[0].mode = zyg::OscMode::wavetable;
@@ -55,8 +51,15 @@ ZygProcessor::ZygProcessor()
         init->oscillators[0].audio[std::size_t(i)] = std::sin(juce::MathConstants<double>::twoPi * i / 2048.0);
     zyg::prepareWavetableMipmaps(init->oscillators[0]);
     init->routes[0].target = zyg::RouteTarget::main;
-    slots[0] = std::move(init);
-    engine.setPatch(slots[0].get());
+    return init;
+}
+
+ZygProcessor::ZygProcessor()
+    : AudioProcessor(BusesProperties()
+          .withInput("Input", juce::AudioChannelSet::stereo(), false)
+          .withInput("Sidechain", juce::AudioChannelSet::stereo(), false)
+          .withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
+    engine.setPatch(patchExchange.latest().get());
     assetRoot = juce::String(zyg::defaultContentRoot().string());
     status = "INIT ready. Play MIDI or load a preset.";
     startTimerHz(10);
@@ -65,13 +68,20 @@ ZygProcessor::ZygProcessor()
     // fixture without embedding or redistributing that preset in Git.
     if (const char* fixture = std::getenv("ZYGZXG_HOST_SMOKE_PRESET")) {
         if (const char* root = std::getenv("ZYGZXG_HOST_SMOKE_ASSETS"))
-            setAssetRoot(juce::File(root));
+            assetRoot = juce::String(root); // test-only override must not change the user's saved setting
         loadPreset(juce::File(fixture));
     }
 }
 
 void ZygProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+    // Playback is stopped here. Drain the one in-flight and one coalesced
+    // publication before preparing, so a newly loaded preset starts immediately.
+    { const juce::ScopedLock lock(controlLock);
+      patchExchange.activate([this](const zyg::Patch* patch) noexcept { engine.setPatch(patch); });
+      patchExchange.flush();
+      patchExchange.activate([this](const zyg::Patch* patch) noexcept { engine.setPatch(patch); }); }
     engine.prepare(sampleRate); auditionVoiceActive = false;
+    hostParameters.prepare(sampleRate);
     scBuf.setSize(2, std::max(samplesPerBlock, 8192), false, true, false);   // allocated here, never in processBlock
 }
 void ZygProcessor::releaseResources() { engine.allNotesOff(); auditionVoiceActive = false; }
@@ -101,11 +111,8 @@ void ZygProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuff
     buffer.clear();
     if (haveSidechain) engine.setSidechain(scBuf.getReadPointer(0), scBuf.getReadPointer(1), numSamples);
     else engine.setSidechain(nullptr, nullptr, 0);
-    const int requested = requestedIndex.load(std::memory_order_acquire);
-    if (requested != activeIndex.load(std::memory_order_relaxed)) {
-        engine.setPatch(slots[requested].get());
-        activeIndex.store(requested, std::memory_order_release);
-    }
+    patchExchange.activate([this](const zyg::Patch* patch) noexcept { engine.setPatch(patch); });
+    hostParameters.beginBlock();
     {   // notes from the on-screen keyboard
         int start1 = 0, size1 = 0, start2 = 0, size2 = 0;
         uiNoteFifo.prepareToRead(uiNoteFifo.getNumReady(), start1, size1, start2, size2);
@@ -133,8 +140,11 @@ void ZygProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuff
     int cursor = 0;
     for (const auto metadata : midi) {
         const int at = juce::jlimit(cursor, buffer.getNumSamples(), metadata.samplePosition);
-        engine.render(left, right, cursor, at - cursor);
+        hostParameters.render(engine, left, right, cursor, at - cursor);
         cursor = at;
+        // The engine handles channel messages only. Constructing a long JUCE
+        // MidiMessage (e.g. SysEx) can allocate; skip unsupported payloads first.
+        if (metadata.numBytes < 1 || metadata.numBytes > 3) continue;
         const auto message = metadata.getMessage();
         if (message.isNoteOn()) {
             midiNotes.fetch_add(1, std::memory_order_relaxed);
@@ -149,7 +159,7 @@ void ZygProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuff
         else if (message.isChannelPressure()) engine.setChannelPressure(message.getChannel(), float(message.getChannelPressureValue()) / 127.0f);
         else if (message.isAftertouch()) engine.setPolyPressure(message.getNoteNumber(), float(message.getAfterTouchValue()) / 127.0f);
     }
-    engine.render(left, right, cursor, buffer.getNumSamples() - cursor);
+    hostParameters.render(engine, left, right, cursor, buffer.getNumSamples() - cursor);
     if (rsState.load(std::memory_order_acquire) == 2) captureResample(left, right, buffer.getNumSamples());
     activeVoices.store(engine.activeVoiceCount(), std::memory_order_relaxed);
     float peakL = 0.0f, peakR = 0.0f;
@@ -175,13 +185,7 @@ void ZygProcessor::copyScope(float* dest, int n) const noexcept {
 bool ZygProcessor::publish(zyg::Patch&& patch) {
     auto owned = std::make_shared<zyg::Patch>(std::move(patch));
     const juce::ScopedLock lock(controlLock);
-    const int current = activeIndex.load(std::memory_order_acquire);
-    const int requested = requestedIndex.load(std::memory_order_acquire);
-    int freeSlot = -1;
-    for (int i = 0; i < 3; ++i) if (i != current && i != requested) { freeSlot = i; break; }
-    if (freeSlot < 0) return false;
-    slots[freeSlot] = std::move(owned);
-    requestedIndex.store(freeSlot, std::memory_order_release);
+    patchExchange.publish(std::move(owned));
     return true;
 }
 
@@ -199,7 +203,8 @@ juce::String ZygProcessor::getAssetRoot() const {
 }
 juce::String ZygProcessor::getDiagnosticsReport() const {
     const juce::ScopedLock lock(controlLock);
-    const auto* patch = slots[requestedIndex.load(std::memory_order_acquire)].get();
+    const auto owned = patchExchange.latest();
+    const auto* patch = owned.get();
     if (!patch) return "No patch loaded";
     juce::String report = juce::String(zyg::statusSummary(*patch)) + "\n";
     for (const auto& d : patch->diagnostics)
@@ -229,6 +234,7 @@ bool ZygProcessor::loadPreset(const juce::File& file) {
 
 bool ZygProcessor::setAssetRoot(const juce::File& root) {
     if (!root.isDirectory()) { setStatus("Content directory does not exist"); return false; }
+    if (!root.getChildFile("Tables").isDirectory()) { setStatus("Select the content root containing the Tables folder"); return false; }
     auto patch = currentPatchCopy();
     patch.assetRoot = root.getFullPathName().toStdString();
     std::erase_if(patch.diagnostics, [](const zyg::Diagnostic& d) {
@@ -237,23 +243,32 @@ bool ZygProcessor::setAssetRoot(const juce::File& root) {
     });
     prepareAudioAssets(patch);
     if (!publish(std::move(patch))) { setStatus("Could not hand off content root to audio thread"); return false; }
+    const auto settingPath = zyg::contentRootSettingsFile();
+    bool remembered = false;
+    if (!settingPath.empty()) {
+        const juce::File settings(juce::String(settingPath.string()));
+        remembered = settings.getParentDirectory().createDirectory().wasOk()
+            && settings.replaceWithText(root.getFullPathName());
+    }
     {
         const juce::ScopedLock lock(controlLock);
         assetRoot = root.getFullPathName();
-        status = "Content directory set. Load a .SerumPreset.";
+        status = remembered ? "Content directory saved. Load a .SerumPreset."
+            : "Content directory set for this instance; the folder setting could not be saved.";
     }
     return true;
 }
 
 zyg::Patch ZygProcessor::currentPatchCopy() const {
     const juce::ScopedLock lock(controlLock);
-    const auto* current = slots[std::size_t(requestedIndex.load(std::memory_order_acquire))].get();
+    const auto owned = patchExchange.latest();
+    const auto* current = owned.get();
     return current ? *current : zyg::Patch{};
 }
 zyg::Patch ZygProcessor::getPatchSnapshot() const { return currentPatchCopy(); }
 std::shared_ptr<const zyg::Patch> ZygProcessor::getPatch() const {
     const juce::ScopedLock lock(controlLock);
-    return slots[std::size_t(requestedIndex.load(std::memory_order_acquire))];
+    return patchExchange.latest();
 }
 namespace {
 template <class Fifo, class Queue, class Item>
@@ -425,20 +440,28 @@ bool ZygProcessor::setNoiseSampleFile(const juce::File& file) {
 
 void ZygProcessor::getStateInformation(juce::MemoryBlock& destination) {
     juce::MemoryOutputStream stream(destination, false);
-    stream.writeString("ZYGZXG-state-2");
+    stream.writeString("ZYGZXG-state-3");
     const auto state = zyg::patchToJson(currentPatchCopy()).dump();
     stream.writeString(juce::String::fromUTF8(state.data(), int(state.size())));
+    hostParameters.state.copyState().writeToStream(stream);
 }
 
 void ZygProcessor::setStateInformation(const void* data, int size) {
     if (!data || size <= 0) return;
     juce::MemoryInputStream stream(data, static_cast<std::size_t>(size), false);
     const auto version = stream.readString();
-    if (version == "ZYGZXG-state-2") {
+    if (version == "ZYGZXG-state-2" || version == "ZYGZXG-state-3") {
         try {
             auto patch = zyg::patchFromJson(zyg::Json::parse(stream.readString().toStdString()));
+            juce::ValueTree restoredParameters;
+            if (version == "ZYGZXG-state-3") {
+                restoredParameters = juce::ValueTree::readFromStream(stream);
+                if (!restoredParameters.hasType("ZYGHostParameters")) throw std::runtime_error("Invalid host parameter state");
+            }
             zyg::mapLegacySerumModulationRoutes(patch);
             prepareAudioAssets(patch);
+            if (restoredParameters.isValid()) hostParameters.restoreState(restoredParameters);
+            else hostParameters.resetState();
             const auto summary = juce::String(zyg::statusSummary(patch));
             const auto restoredRoot = juce::String(patch.assetRoot);
             if (publish(std::move(patch))) {
@@ -451,6 +474,7 @@ void ZygProcessor::setStateInformation(const void* data, int size) {
         return;
     }
     if (version != "ZYGZXG-state-1") { setStatus("Unknown plugin state format"); return; }
+    hostParameters.resetState();
     const auto root = stream.readString();
     const int length = stream.readInt();
     if (length < 0 || length > 128 * 1024 * 1024 || stream.getNumBytesRemaining() < length) {
@@ -523,6 +547,7 @@ void ZygProcessor::captureResample(const float* l, const float* r, int n) noexce
 }
 
 void ZygProcessor::timerCallback() {
+    { const juce::ScopedLock lock(controlLock); patchExchange.flush(); }
     if (rsState.load(std::memory_order_acquire) == 3) finishResample();
 }
 

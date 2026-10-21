@@ -2,7 +2,9 @@
 #include "FxParams.h"
 #include "Wavetable.h"
 #include "Assets.h"
+#include "SampleSerialization.h"
 #include "dsp/Filters.h"
+#include "dsp/FxEngine.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -29,6 +31,18 @@ const Json& obj(const Json& j, const std::string& key) {
     return it != j.end() && it->is_object() ? *it : empty;
 }
 const Json& params(const Json& j) { return obj(j, "plainParams"); }
+
+// Measured via Serum 2.1.5 host automation, state snapshots and offline renders.
+// Sync still serializes 32 * normalized^5; the control selects 47 divisions.
+// Decode that UI encoding into native quarter-note beats, outside the DSP.
+double envelopeSyncBeats(double storedTime) {
+    const double norm = std::pow(std::clamp(storedTime / 32.0, 0.0, 1.0), 0.2);
+    const int index = std::clamp(int(std::lround(norm * 46.0 + 1e-9)), 0, 46);
+    if (index == 0) return 0.0; // "fast"
+    const int group = (index - 1) / 3, variant = (index - 1) % 3;
+    const double base = std::ldexp(1.0 / 256.0, group);
+    return base * (variant == 1 ? 4.0 / 3.0 : variant == 2 ? 1.5 : 1.0);
+}
 double number(const Json& j, const char* key, double fallback) {
     if (!j.is_object()) return fallback;
     const auto it = j.find(key);
@@ -213,7 +227,8 @@ int distortionMode(const std::string& s) {
     return 6;
 }
 int reverbType(const std::string& s) {
-    if (s == "kVintage") return 1; if (s == "kSpace") return 2; if (s == "kAbyss") return 3; return 0;
+    if (s == "kVintage") return 1; if (s == "kNitrous" || s == "kSpace") return 2;
+    if (s == "kBasin" || s == "kAbyss") return 3; return 0;
 }
 
 CurvePoints curveFromJson(const Json& j, bool closed) {
@@ -437,6 +452,11 @@ void mapDestination(const Patch& patch, ModulationRoute& r) {
         for (std::size_t i = 0; i < patch.fx.size(); ++i) {
             const auto& fxm = patch.fx[i];
             if (fxm.rack != rack || fxm.position != pos || fxm.type != m) continue;
+            const bool splitter = fxm.fxType == FxType::split || fxm.fxType == FxType::split3 || fxm.fxType == FxType::splitMS;
+            // Topology is fixed for a bound patch; splitter output gain has no
+            // native implementation. Preserve these routes as unresolved.
+            if (splitter && (n == "kParamLevelOut" || n == "kParamModuleCount1"
+                    || n == "kParamModuleCount2" || n == "kParamModuleCount3")) break;
             if (n == "kParamLevelOut") { set(ModTarget::fxParam, int(i), fxLevelSlot); break; }
             const auto table = fxParamTable(fxm.fxType);
             for (std::size_t k = 0; k < table.size(); ++k) if (n == table[k].serumKey) { set(ModTarget::fxParam, int(i), int(k)); break; }
@@ -483,7 +503,10 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
     {
         Mod g{params(global), "Global0", t};
         auto& gs = patch.globals;
-        patch.masterVolume = g.num("kParamMasterVolume", 0.7);
+        patch.masterVolume = g.num("kParamMasterVolume", 0.25);
+        gs.masterModulationPower = 2.0;
+        gs.outputGain = std::pow(10.0, 3.0 / 20.0); // measured Main control's +3 dB reference scale
+        gs.masterAfterEffects = true;
         patch.mono = g.flag("kParamMonoToggle", g.flag("kParamMono", false));
         patch.polyphony = std::clamp(int(g.num("kParamPolyCount", g.num("kParamPoly", 16))), 1, 64);
         gs.directVol = g.num("kParamDirectVol", 1.0);
@@ -552,10 +575,12 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         osc.mode = i == 3 ? OscMode::noise : i == 4 ? OscMode::sub : oscillatorMode(osc.modeId);
         osc.octave = int(m.num("kParamOctave", 0.0)); osc.semitone = m.num("kParamCoarsePit", m.num("kParamCoarse", 0.0));
         osc.pitch = m.num("kParamPitch", 0.0); osc.fine = m.num("kParamFine", 0.0);
-        osc.volume = m.num("kParamVolume", 0.75);
+        osc.volume = m.num("kParamVolume", i == 3 ? 0.0625 : 0.5625);
+        osc.volumeModulationPower = 2.0; osc.detuneModulationPower = 2.0;
+        osc.detuneExponent = 1.25; osc.detunePolarity = -1.0; osc.spreadUnisonPhase = false;
         osc.pan = std::clamp(m.num("kParamPan", 0.0) / 50.0, -1.0, 1.0);
         osc.unison = std::clamp(int(std::lround(m.num("kParamUnison", 1.0))), 1, 16);
-        osc.detune = m.num("kParamDetune", 0.2); osc.blend = m.num("kParamDetuneWid", 75.0);
+        osc.detune = m.num("kParamDetune", 0.25); osc.blend = m.num("kParamDetuneWid", 75.0);
         osc.unisonStereo = m.num("kParamUnisonStereo", 100.0); osc.unisonRange = m.num("kParamUnisonRange", 2.0);
         osc.detuneMode = detuneMode(m.str("kParamDetuneMode")); osc.unisonStack = unisonStack(m.str("kParamUnisonStack"));
         osc.unisonWarp = m.num("kParamUnisonWarp", 0.0); osc.unisonWarp2 = m.num("kParamUnisonWarp2", 0.0);
@@ -592,12 +617,17 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         const Json& mode = obj(o, modeKey);
         Mod mm{params(mode), key + "." + modeKey, t};
         osc.modeState = mode;
-        osc.tablePosition = mm.num("kParamTablePos", 0.0);
-        osc.initialPhase = mm.num("kParamInitialPhase", 0.0);
-        osc.randomPhase = mm.num("kParamRandomPhase", 0.0);
+        osc.tablePosition = std::clamp((mm.num("kParamTablePos", 1.0) - 1.0) / 255.0, 0.0, 1.0) * 256.0;
+        osc.frameBinPosition = true;
+        const double frameMode = mm.num("kParamXfadeMode", 0.0);
+        osc.interpolateFrames = frameMode == 1.0;
+        if (frameMode != 0.0 && frameMode != 1.0)
+            diagnostic(patch, key + "." + modeKey + ".kParamXfadeMode", "not_rendered_parameter",
+                "unrecognized frame crossfade mode; preserved with stepped-frame fallback");
+        osc.initialPhase = mm.num("kParamInitialPhase", osc.mode == OscMode::wavetable ? 180.0 : 0.0);
+        osc.randomPhase = mm.num("kParamRandomPhase", osc.mode == OscMode::wavetable ? 100.0 : 0.0);
         osc.perVoicePhase = mm.str("kParamPhaseMemory") != "kContiguous";
         osc.unisonWTPos = mm.num("kParamUnisonWTPos", 0.0);
-        mm.mark("kParamXfadeMode");
         if (osc.mode == OscMode::sub) {
             osc.subShape = subShape(mm.str("kParamShape"));
             osc.contiguousPhase = mm.flag("kParamContiguousPhase", false);
@@ -647,6 +677,15 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
             if (!id.empty() && osc.warpDefinitions[std::size_t(slot)].mode == WarpMode::unknown)
                 diagnostic(patch, key + "." + modeKey + ".Warp" + std::to_string(slot + 1), "not_rendered", "warp " + id + " has no native DSP");
         }
+        if(osc.mode==OscMode::wavetable || osc.mode==OscMode::sub) {
+            const bool reconstructed=std::any_of(osc.warpDefinitions.begin(),osc.warpDefinitions.end(),[](const WarpDefinition& w) {
+                return w.sourceIndex>=0 && (w.mode==WarpMode::frequencyMod || w.mode==WarpMode::frequencyModX
+                    || w.mode==WarpMode::frequencyModPhase || w.mode==WarpMode::phaseMod
+                    || w.mode==WarpMode::ringMod || w.mode==WarpMode::amplitudeMod);
+            });
+            if(reconstructed) diagnostic(patch,key+"."+modeKey,"dsp_active",
+                "independent bandlimited external audio modulation; 24-sample modulation-path delay; reference phase/dynamics remain uncalibrated");
+        }
         // asset references
         if (osc.mode == OscMode::wavetable) {
             osc.asset = string(mode, "relativePathToWT");
@@ -659,6 +698,22 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         } else if (osc.mode == OscMode::sample || osc.mode == OscMode::granular || osc.mode == OscMode::spectral) {
             osc.asset = string(mode, "samplePathRelative");
             osc.baseNote = int(number(mode, "baseNote", 60.0));
+            if (mode.contains("embedded_audio")) {
+                const auto& embedded = obj(mode, "embedded_audio");
+                const auto data = embedded.find("data");
+                std::string error;
+                // An explicitly malformed rate must not silently fall back.
+                const double rate = embedded.contains("sampleRate")
+                    ? number(embedded, "sampleRate", 0) : number(mode, "sampleRate", 0);
+                if (data != embedded.end()) osc.sample = decodePlanarSample(*data, rate, osc.baseNote, error);
+                else error = "embedded audio has no planar data";
+                if (osc.sample) {
+                    osc.asset.clear();
+                    osc.tableName = string(embedded, "table_name");
+                    diagnostic(patch, key + "." + modeKey + ".embedded_audio", "asset_loaded",
+                        "embedded mono/stereo audio decoded; native playback/spectral character remains independently implemented");
+                } else diagnostic(patch, key, "unsupported_asset", error);
+            }
         }
         if (osc.mode == OscMode::wavetable && mode.contains("embeddedWTData") && mode["embeddedWTData"].is_array()) {
             // Tables authored in Serum's editor travel inside the preset as raw frames.
@@ -687,7 +742,7 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         else if (osc.enabled && root.empty() && !osc.asset.empty() && osc.mode != OscMode::sub)
             diagnostic(patch, "Oscillator" + std::to_string(i), "missing_asset", "content root not set: " + osc.asset);
         if (osc.enabled && osc.mode != OscMode::wavetable && osc.mode != OscMode::sub && osc.mode != OscMode::noise
-            && osc.asset.empty() && osc.embeddedSfz.empty())
+            && osc.asset.empty() && osc.embeddedSfz.empty() && !osc.sample && !mode.contains("embedded_audio"))
             diagnostic(patch, "Oscillator" + std::to_string(i), "missing_asset", "no audio asset reference");
     }
     // Serum's default NOISE source (no sample selected) is the generator itself
@@ -705,7 +760,10 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         FilterResponse response = FilterResponse::low12; int variant = 0;
         const bool known = dsp::filterFromSerumId(f.type, response, variant);
         f.response = known ? response : FilterResponse::low12; f.variant = variant;
-        f.cutoff = m.num("kParamFreq", 1.0); f.resonance = m.num("kParamReso", 10.0); f.drive = m.num("kParamDrive", 0.0);
+        f.cutoff = m.num("kParamFreq", 0.5); f.resonance = m.num("kParamReso", 10.0); f.drive = m.num("kParamDrive", 0.0);
+        f.cutoffMinHz = 8.175798915643707;
+        f.cutoffMaxHz = f.cutoffMinHz * std::exp2(11.4);
+        f.cutoffCeilingHz = 22050.0;
         f.var = m.num("kParamVar", 0.0); f.wet = m.num("kParamWet", 100.0); f.level = m.num("kParamLevelOut", 0.5);
         f.stereo = m.num("kParamStereo", 50.0); f.x = m.num("kParamX", 0.5); f.y = m.num("kParamY", 0.5);
         f.keyTrack = m.flag("kParamKeyTrack", false); f.pad = m.flag("kParamPad", false);
@@ -720,16 +778,19 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         Mod m{params(ej), key, t};
         auto& e = patch.envelopes[std::size_t(i)];
         e.additional = ej;
-        e.attack = m.num("kParamAttack", e.attack); e.hold = m.num("kParamHold", e.hold);
-        e.decay = m.num("kParamDecay", e.decay); e.sustain = m.num("kParamSustain", e.sustain);
-        e.release = m.num("kParamRelease", e.release);
+        e.attack = m.num("kParamAttack", i == 0 ? 0.001 : 0.0005); e.hold = m.num("kParamHold", 0.0);
+        e.decay = m.num("kParamDecay", 1.0); e.sustain = m.num("kParamSustain", 1.0);
+        if (i == 0) e.sustain *= e.sustain; // Env 1 stores the control; its signal is amplitude gain.
+        e.exponentialCurves = true;
+        e.release = m.num("kParamRelease", 0.015);
         e.curve = {m.num("kParamCurve1", 50.0), m.num("kParamCurve2", 66.6), m.num("kParamCurve3", 66.6)};
         e.start = m.num("kParamStart", 0.0); e.end = m.num("kParamEnd", 0.0);
         e.legatoInverted = m.flag("kParamLegatoInverted", false);
         e.restartOnSteal = m.flag("kParamVoiceStealRestart", true);
-        if (m.flag("kParamBeatSync", false)) {
-            m.mark("kParamBeatSync");
-            diagnostic(patch, key, "not_rendered_parameter", "tempo-synced envelope times are read as seconds; sync semantics unverified");
+        e.tempoSync = m.flag("kParamBeatSync", false);
+        if (e.tempoSync) {
+            e.attack = envelopeSyncBeats(e.attack); e.hold = envelopeSyncBeats(e.hold);
+            e.decay = envelopeSyncBeats(e.decay); e.release = envelopeSyncBeats(e.release);
         }
     }
 
@@ -747,6 +808,17 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
     }
     if (patch.routes[5].target == RouteTarget::filter && patch.routes[6].target == RouteTarget::filter)
         diagnostic(patch, "RoutingSlot5..6", "not_rendered", "two-way filter feedback is not modeled; the backward edge uses Main fallback");
+
+    // Scalar editors use the same top-origin coordinates as drawn LFOs.
+    const auto& scalars = obj(doc.state, "scalars");
+    patch.velocityCurve = curveFromJson(obj(scalars, "velo"), false);
+    patch.noteCurve = curveFromJson(obj(scalars, "note"), false);
+    patch.quantizeVelocityCurve = true;
+    for (const char* scalar : {"velo", "note"}) {
+        const auto& map = obj(scalars, scalar);
+        if (patch.globals.portamentoTime > 0.0 && map.contains("legato") && map["legato"].is_boolean() && map["legato"].get<bool>())
+            diagnostic(patch, std::string("scalars.") + scalar, "not_rendered_parameter", "scalar legato interpolation during portamento is preserved but uncalibrated");
+    }
 
     // -------------------------------------------------------------------- LFOs
     patch.lfoOneSine = false;
@@ -769,16 +841,33 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         else { d.path = curveFromJson(cd, true); if (d.path.empty() && d.shape == LfoShape::path) d.shape = LfoShape::curve; }
         const auto modeName = m.str("kParamMode");
         d.mode = modeName == "Free" ? LfoMode::free : modeName == "Envelope" ? LfoMode::envelope : modeName == "OneShot" ? LfoMode::oneShot : LfoMode::trigger;
-        d.rateHz = m.num("kParamRate", 1.0);
-        if (m.flag("kParamRate10x", false)) d.rateHz *= 10.0;
-        d.tempoSync = false; // stored rates are read as Hz; see docs/DSP_DECISIONS.md
+        if (d.shape == LfoShape::curve && d.path.empty()) {
+            d.path.x = {0.0, 0.5, 1.0}; d.path.y = {0.0, 1.0, 0.0};
+            d.path.bend = {0.5, 0.5, 0.5}; d.path.closed = true;
+        }
+        const double storedRate = m.num("kParamRate", 6.25);
+        d.rateHz = storedRate;
+        d.tempoSync = m.flag("kParamBeatSync", true);
+        const bool dotted = m.flag("kParamDotted", false);
+        const bool triplets = m.flag("kParamTriplets", false);
+        // Measured 43-position grid. Flags enable intermediate choices rather
+        // than multiplying every division; the quarter-note centre is unchanged.
+        const int step = std::clamp(int(std::round(42.0 * std::pow(std::clamp(storedRate / 100.0, 0.0, 1.0), 0.25) + 1.0e-9)), 0, 42);
+        d.syncBeats = std::exp2(7 - step / 3);
+        if (step % 3 == 1 && dotted) d.syncBeats *= 0.75;
+        if (step % 3 == 2) {
+            if (triplets) d.syncBeats *= 2.0 / 3.0;
+            else if (dotted) d.syncBeats *= 0.75;
+        }
+        if (m.flag("kParamRate10x", false)) {
+            if (!d.tempoSync) d.rateHz *= 10.0;
+            else diagnostic(patch, key, "not_rendered_parameter", "Rate10x with tempo sync is preserved but uncalibrated");
+        }
         d.phaseDegrees = m.num("kParamPhase", 0.0); d.rise = m.num("kParamRise", 0.0); d.delay = m.num("kParamDelay", 0.0);
         d.smooth = m.num("kParamSmooth", 0.0); d.mono = m.flag("kParamMono", false); d.anchored = m.flag("kParamAnchored", false);
         d.direction = int(m.num("kParamDirection", 0.0));
-        for (const char* k : {"kParamBeatSync", "kParamDotted", "kParamTriplets", "kParamGridX", "kParamGridY", "kParamSwing",
+        for (const char* k : {"kParamGridX", "kParamGridY", "kParamSwing",
                               "kParamPhaseSnap", "kParamDefaultMode"}) m.mark(k);
-        if (m.has("kParamBeatSync") && number(params(lj), "kParamBeatSync", 0.0) != 0.0)
-            diagnostic(patch, key, "not_rendered_parameter", "tempo-synced LFO rate is read as Hz; sync mapping unverified");
         if (!params(lj).empty() || !pd.empty() || !cd.empty()) diagnostic(patch, key, "dsp_active", "native LFO generator active");
     }
 
@@ -819,9 +908,100 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
                             if (m.has(table[k].serumKey)) { module.p[k] = m.num(table[k].serumKey, table[k].def); module.set[k] = true; }
                         if (m.has("kParamLevelOut")) { module.p[fxLevelSlot] = m.num("kParamLevelOut", 0.5); module.set[fxLevelSlot] = true; }
                         if (m.has("kParamEnable")) module.enabled = m.flag("kParamEnable", true);
-                        if (module.fxType == FxType::distortion) module.modeVariant = distortionMode(m.str("kParamMode"));
-                        else if (module.fxType == FxType::reverb) module.modeVariant = reverbType(m.str("kParamType"));
+                        if ((module.fxType == FxType::split || module.fxType == FxType::split3 || module.fxType == FxType::splitMS)
+                                && m.has("kParamLevelOut"))
+                            diagnostic(patch, m.path + ".kParamLevelOut", "not_rendered_parameter", "splitter output level is preserved but not applied");
+                        if (module.fxType == FxType::eq) {
+                            module.eqMeasuredModes = true;
+                            auto absent = [&](int slot, double value) { if (!module.set[std::size_t(slot)]) {
+                                module.p[std::size_t(slot)] = value; module.set[std::size_t(slot)] = true;
+                            }};
+                            absent(fx::eFreq1, 209.616962917974); absent(fx::eFreq2, 2040.5359441367445);
+                            absent(fx::eReso1, 60.0); absent(fx::eReso2, 60.0);
+                            absent(fx::eType1, 0.0); absent(fx::eType2, 0.0);
+                            diagnostic(patch, m.path, "dsp_active",
+                                "independent state-variable EQ: shelf/bell/cut modes and measured static resonance, smoothed controls; reference modulation transitions and full sound remain partial");
+                        }
+                        if (module.fxType == FxType::distortion) {
+                            module.modeVariant = distortionMode(m.str("kParamMode"));
+                            if (module.modeVariant == 6) {
+                                // Measured small-signal gain: roughly -8.65 + 39*drive dB.
+                                // Correct the native biased-tanh derivative; retain its independent shape.
+                                module.distortionInputGainDb = -8.625;
+                                module.distortionDriveRangeDb = 39.0;
+                                module.distortionGainCompensation = 0.0;
+                            }
+                        }
+                        else if (module.fxType == FxType::comp) {
+                            module.compressorCubicSingleBand = true;
+                            module.compressorGlobalControls = true;
+                            module.compressorAffineMakeup = true;
+                            module.compressorPhaseMatchedDry = m.flag("kParamCompensatedWetDry", true);
+                            module.compressorBandAttackMs = 0.1;
+                            if (m.flag("kParamMultiband", false))
+                                diagnostic(patch, m.path + ".kParamMultiband", "dsp_active",
+                                    "independent phase-coherent multiband with fast 0.1 ms native band attack; global attack retained for single-band mode; static controls/makeup measured, remaining transient/crossover/automation behavior partial; compensated dry retains crossover phase");
+                            // Declared defaults observed through the reference controller state.
+                            auto absent = [&](int slot, double value) { if (!module.set[std::size_t(slot)]) {
+                                module.p[std::size_t(slot)] = value; module.set[std::size_t(slot)] = true;
+                            }};
+                            absent(fx::pAttack, 90.091); absent(fx::pRelease, 90.091); absent(fx::pRatio, 4.0);
+                            absent(fx::pRatioBelow, 0.0); absent(fx::pXoverLow, 128.29653151726313);
+                            for (int band = 0; band < 3; ++band) {
+                                absent(fx::pRatio0 + band, 1.0); absent(fx::pRatioBelow0 + band, 1.0);
+                                const auto suffix = std::to_string(band);
+                                const auto deadband = "kParamDeadband" + suffix;
+                                module.compressorDeadbandDb[std::size_t(band)] = std::clamp(
+                                    m.num(deadband.c_str(), module.compressorDeadbandDb[std::size_t(band)]), 3.0, 24.0);
+                                const auto bypassUp = "kParamBypassUp" + std::to_string(band + 1);
+                                const auto bypassDown = "kParamBypassDown" + std::to_string(band + 1);
+                                module.compressorBypassUp[std::size_t(band)] = m.flag(bypassUp.c_str(), false);
+                                module.compressorBypassDown[std::size_t(band)] = m.flag(bypassDown.c_str(), false);
+                            }
+                        }
+                        else if (module.fxType == FxType::delay) {
+                            module.delayTimingModel = DelayTimingModel::fourthPowerBeatGrid;
+                            auto absent = [&](int slot, double value) { if (!module.set[std::size_t(slot)]) {
+                                module.p[std::size_t(slot)] = value; module.set[std::size_t(slot)] = true;
+                            }};
+                            absent(fx::dBW, 6.75); absent(fx::dFeedback, 40.0); absent(fx::dFreq, 848.5281374238571);
+                            absent(fx::dTimeL, 0.0772939453125); absent(fx::dTimeR, 0.0772939453125);
+                            for (const int slot : {fx::dTimeL, fx::dTimeR})
+                                module.p[std::size_t(slot)] = std::clamp(module.p[std::size_t(slot)], dsp::delayTimeControlRange.lo, dsp::delayTimeControlRange.hi);
+                            // A linked reference preset loads with the right
+                            // side's effective settings on both channels,
+                            // including declared defaults when right is absent.
+                            if (module.set[fx::dLink] && module.p[fx::dLink] > 0.5) {
+                                module.p[fx::dTimeL] = module.p[fx::dTimeR]; module.set[fx::dTimeL] = true;
+                                module.p[fx::dOffsetL] = module.set[fx::dOffsetR] ? module.p[fx::dOffsetR] : table[fx::dOffsetR].def;
+                                module.set[fx::dOffsetL] = true;
+                            }
+                            absent(fx::dWet, 30.0); absent(fx::dBeatSync, 1.0);
+                            // Reference 0 = normal, 1 = ping-pong. Native mode
+                            // slots retain their existing 1/2 enum domain.
+                            module.p[fx::dMode] = m.num("kParamMode", 0.0) + 1.0;
+                            module.set[fx::dMode] = true;
+                            if (module.p[fx::dBeatSync] > 0.5)
+                                diagnostic(patch, m.path + ".kParamBeatSync", "render_limit", "delay timing is capped at 32 seconds; longest divisions with offsets can clip below 45 BPM");
+                        }
+                        else if (module.fxType == FxType::reverb) {
+                            module.modeVariant = reverbType(m.str("kParamType"));
+                            auto absent = [&](int slot, double value) { if (!module.set[std::size_t(slot)]) {
+                                module.p[std::size_t(slot)] = value; module.set[std::size_t(slot)] = true;
+                            }};
+                            absent(fx::rDelay, 30.625); absent(fx::rFeedback, 25.0); absent(fx::rFreq, 0.0);
+                            absent(fx::rFreqB, 35.0); absent(fx::rFreqC, 70.0); absent(fx::rMode, 70.0);
+                            absent(fx::rPreDelay, 0.0); absent(fx::rSize, 35.0); absent(fx::rVintageScale, 70.0);
+                            absent(fx::rVintageScaleB, 70.0); absent(fx::rWet, 20.0); absent(fx::rWidth, 20.0);
+                            if (m.flag("kParamPreDelayBeatSync", false))
+                                diagnostic(patch, m.path + ".kParamPreDelayBeatSync", "not_rendered_parameter", "reverb pre-delay beat grid is not yet calibrated");
+                        }
                         else if (module.fxType == FxType::filter) {
+                            // The controller-declared sparse Serum default is
+                            // zero resonance. Keep native FX defaults intact.
+                            if (!m.has("kParamReso")) {
+                                module.p[fx::fReso] = 0.0; module.set[fx::fReso] = true;
+                            }
                             const auto id = m.str("kParamType", "L12");
                             FilterResponse response = FilterResponse::low12; int variant = 0;
                             if (!dsp::filterFromSerumId(id, response, variant))
@@ -844,6 +1024,64 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
                        "FX module " + added.type + (added.fxType == FxType::unknown ? " retained" : " native DSP active"));
             ++pos;
         }
+    }
+
+    // Diagnose the bounded native graph on this control-thread import path.
+    // Pool assignment follows source order; child spans follow rack order.
+    {
+        std::array<std::vector<int>, 3> racks;
+        std::array<int, dsp::FxEngine::maxModules> splitOrdinal;
+        splitOrdinal.fill(-1);
+        auto splitType = [](FxType type) { return type == FxType::split || type == FxType::split3 || type == FxType::splitMS; };
+        auto modulePath = [&](int index) {
+            const auto& module = patch.fx[std::size_t(index)];
+            return "FXRack" + std::to_string(module.rack) + ".FX[" + std::to_string(module.position) + "]." + module.type;
+        };
+        int splitCount = 0;
+        for (std::size_t i = 0; i < patch.fx.size(); ++i) {
+            if (i >= dsp::FxEngine::maxModules) {
+                diagnostic(patch, modulePath(int(i)), "not_rendered", "module exceeds the native 96-module FX capacity");
+                continue;
+            }
+            const auto& module = patch.fx[i];
+            racks[std::size_t(module.rack)].push_back(int(i));
+            if (splitType(module.fxType)) splitOrdinal[i] = splitCount++;
+        }
+        auto walk = [&](auto&& self, const std::vector<int>& rack, int begin, int end, int depth) -> void {
+            int cursor = begin;
+            while (cursor < end) {
+                const int index = rack[std::size_t(cursor)];
+                const auto& module = patch.fx[std::size_t(index)];
+                if (!splitType(module.fxType)) { ++cursor; continue; }
+                const int bands = module.fxType == FxType::split3 ? 3 : 2;
+                int counts[3] = {0, 0, 0}, total = 0;
+                for (int b = 0; b < bands; ++b) {
+                    const auto slot = std::size_t(fx::sCount1 + b);
+                    const double requested = module.set[slot] ? module.p[slot] : 0.0;
+                    const int count = std::isfinite(requested) ? int(std::lround(std::clamp(requested, 0.0, 8.0))) : 0;
+                    counts[b] = std::min(count, end - cursor - 1 - total);
+                    total += counts[b];
+                    if (!std::isfinite(requested) || requested != double(counts[b]))
+                        diagnostic(patch, modulePath(index) + "." + fxParamTable(module.fxType)[slot].serumKey,
+                            "not_rendered_parameter", "splitter child count is clipped to its parent span and native per-branch capacity");
+                }
+                if (module.enabled && (depth >= 2 || splitOrdinal[std::size_t(index)] >= 32))
+                    diagnostic(patch, modulePath(index), "not_rendered", depth >= 2
+                        ? "splitter subtree is bypassed beyond two active nesting levels"
+                        : "splitter subtree is bypassed beyond the native 32-splitter capacity");
+                else if (module.enabled) {
+                    int child = cursor + 1;
+                    for (int b = 0; b < bands; ++b) {
+                        const auto bypass = std::size_t(fx::sBypass1 + b);
+                        if (!module.set[bypass] || module.p[bypass] <= 0.5)
+                            self(self, rack, child, child + counts[b], depth + 1);
+                        child += counts[b];
+                    }
+                }
+                cursor += 1 + total;
+            }
+        };
+        for (const auto& rack : racks) walk(walk, rack, 0, int(rack.size()), 0);
     }
 
     // ------------------------------------------------------- arpeggiator & clips
@@ -941,6 +1179,10 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
         route.destinationInstance = int(number(mj, "destModuleID", 0.0));
         route.destinationParameterId = int(number(mj, "destModuleParamID", -1.0));
         mapDestination(patch, route);
+        if (route.destinationModule == "FXDelay" && (route.destinationParameter == "kParamTimeL"
+                || route.destinationParameter == "kParamTimeR" || route.destinationParameter == "kParamBeatSync"))
+            diagnostic(patch, key + ".destModuleParamName", "not_rendered_parameter",
+                "native delay timing modulation is active but reference transitions and depth remain uncalibrated");
         route.amount = m.num("kParamAmount", 0.0);
         route.bipolar = m.flag("kParamBipolar", false); route.bypass = m.flag("kParamBypass", false);
         route.curveIn = m.num("kParamCurveIn", 0.0); route.curveOut = m.num("kParamCurveOut", 0.0);
@@ -953,6 +1195,7 @@ Patch importSerum(const SerumDocument& doc, const std::filesystem::path& root, c
             if (flex.size() > 1 && m.flag("kParamAuxCurveData", false)) route.auxCurve = curveFromJson(flex[1], false);
         }
         m.mark("kParamMainCurveData"); m.mark("kParamAuxCurveData");
+        if (!route.auxCurve.empty()) diagnostic(patch, key + ".flex[1]", "not_rendered_parameter", "auxiliary curve is preserved but not applied by the native matrix");
         for (const char* k : {"kParamAuxCurve", "kParamDelayBeatSync", "kParamOut", "kParamSmoothLink"}) m.mark(k);
         route.additional = mj;
         const bool srcOk = route.sourceKind != ModSource::unknown;
